@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+:root {
+  --bg: #f3f4f6; --dot: #d3d7de; --panel: #ffffff; --panel-2: #f6f7f9; --border: #e2e5ea;
+  --text: #15181e; --muted: #5f6775; --accent: #3563e9; --edge: #7f8797; --edge-back: #b4bac5;
+  --label-bg: #ffffff; --card: #ffffff;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 10px 28px rgba(16,24,40,.09);
+  --shadow-hi: 0 0 0 3px var(--accent), 0 14px 36px rgba(16,24,40,.18);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1014; --dot: #252932; --panel: #161920; --panel-2: #1c2028; --border: #2a2f3a;
+    --text: #e7e9ee; --muted: #98a0ae; --accent: #7c9dff; --edge: #727b8c; --edge-back: #474e5b;
+    --label-bg: #1c2028; --card: #1a1d24;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.35);
+    --shadow-hi: 0 0 0 3px var(--accent), 0 14px 36px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text); overflow: hidden;
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+button { font: inherit; color: inherit; }
+#app { display: flex; height: 100%; }
+
+/* ---------- sidebar ---------- */
+#side {
+  width: 288px; flex: none; background: var(--panel); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; min-height: 0; z-index: 20; transition: margin-left .2s ease;
+}
+#app.side-closed #side { margin-left: -288px; }
+.side-head { padding: 18px 18px 12px; border-bottom: 1px solid var(--border); }
+.side-head h1 { font-size: 17px; line-height: 1.3; margin: 0 0 4px; letter-spacing: -.01em; }
+.side-head p { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.meta span { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.search { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.search input {
+  width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel-2); color: var(--text); font: inherit; outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+#tree { overflow: auto; flex: 1; padding: 8px 8px 24px; }
+.g-item { margin-bottom: 4px; }
+.g-btn, .s-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0;
+  background: none; padding: 6px 10px; border-radius: 7px; cursor: pointer;
+}
+.g-btn { font-weight: 600; }
+.g-btn:hover, .s-btn:hover { background: var(--panel-2); }
+.s-btn { padding-left: 28px; color: var(--muted); font-size: 13px; }
+.s-btn.active { background: var(--panel-2); color: var(--text); }
+.s-btn.hidden-by-search { display: none; }
+.g-btn .count { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 12px; }
+.dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.kind { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+
+/* ---------- stage ---------- */
+#stage {
+  position: relative; flex: 1; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px);
+}
+#stage.panning { cursor: grabbing; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+
+.frame {
+  position: absolute; border-radius: 22px;
+  background: color-mix(in srgb, var(--g) 7%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--g) 35%, transparent);
+}
+.frame.kind-nav { border-width: 2px; background: color-mix(in srgb, var(--g) 10%, transparent); }
+.frame-grip {
+  position: absolute; left: 0; right: 0; top: 0; cursor: move; border-radius: 22px 22px 0 0; z-index: 1;
+}
+.frame-grip:hover { background: color-mix(in srgb, var(--g) 10%, transparent); }
+.frame.dragging { box-shadow: 0 0 0 2px var(--g); }
+.frame.dragging .frame-grip { cursor: grabbing; }
+.frame-h { position: absolute; left: 24px; top: 18px; right: 24px; display: flex; align-items: baseline; gap: 10px; white-space: nowrap; overflow: hidden; }
+.frame-h b { font-size: 22px; letter-spacing: -.01em; color: color-mix(in srgb, var(--g) 70%, var(--text)); }
+.frame-h span { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+
+#edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.e { fill: none; stroke: var(--edge); stroke-width: 2; stroke-linejoin: round; marker-end: url(#arrow); transition: opacity .15s; }
+.e.cross { stroke-dasharray: 9 6; }
+.e.kind-back { stroke: var(--edge-back); stroke-dasharray: 3 6; }
+.e.kind-modal { stroke-dasharray: 2 5; stroke-linecap: round; }
+.e.hl { stroke: var(--accent) !important; stroke-width: 3; }
+body.hide-back .e.kind-back, body.hide-back .lbl.kind-back { display: none; }
+body.hide-cross .e.cross, body.hide-cross .lbl.cross { display: none; }
+body.hide-labels .lbl { display: none; }
+
+#labels { position: absolute; left: 0; top: 0; pointer-events: none; }
+.lbl {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; max-width: 220px;
+  overflow: hidden; text-overflow: ellipsis; font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  background: var(--label-bg); border: 1px solid var(--border); color: var(--muted); transition: opacity .15s;
+}
+.lbl.hl { color: var(--text); border-color: var(--accent); z-index: 2; }
+
+#cards { position: absolute; left: 0; top: 0; }
+.card {
+  position: absolute; background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+  border: 1px solid var(--border); overflow: hidden; cursor: pointer; transition: opacity .15s, box-shadow .15s;
+  user-select: none; -webkit-user-select: none;
+}
+.card:hover, .card.hl { box-shadow: var(--shadow-hi); }
+.card.selected { box-shadow: var(--shadow-hi); outline: 2px solid var(--accent); outline-offset: 3px; }
+.card.dragging { cursor: grabbing; transition: none; z-index: 5; }
+.card-h { height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+.card-h .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-h .r { margin-left: auto; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+.card-img { position: relative; overflow: hidden; background: var(--panel-2); }
+.card-img img { display: block; width: 100%; height: auto; pointer-events: none; }
+.hs {
+  position: absolute; display: none; border: 2px solid var(--c); border-radius: 6px; pointer-events: none;
+  background: color-mix(in srgb, var(--c) 16%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 25%, transparent);
+}
+body.hotspots .hs.on { display: block; }
+.hs.hl { border-width: 3px; background: color-mix(in srgb, var(--c) 30%, transparent); }
+.card-img.cropped::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--card) 92%, transparent));
+}
+.noimg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 16px; }
+.badges { position: absolute; top: 52px; left: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+.badge { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.badge.state { background: #6b7280; }
+
+body.focusing .card:not(.hl):not(.selected) { opacity: .4; }
+body.focusing .e:not(.hl), body.focusing .lbl:not(.hl) { opacity: .1; }
+body.searching .card:not(.match) { opacity: .2; }
+
+/* ---------- toolbar / minimap ---------- */
+.toolbar {
+  position: absolute; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 2px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 4px; z-index: 10;
+  max-width: calc(100% - 248px); overflow-x: auto;
+}
+.tb { border: 0; background: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 13px; }
+.tb:hover { background: var(--panel-2); }
+.tb[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.tb.zoom { min-width: 56px; font-variant-numeric: tabular-nums; }
+.sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex: none; }
+#side-toggle { position: absolute; left: 12px; top: 12px; z-index: 10; background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.pop {
+  position: absolute; left: 16px; bottom: 70px; z-index: 12; width: 280px; padding: 14px; display: grid; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); cursor: default;
+}
+.pop[hidden] { display: none; }
+.pop-h { font-weight: 700; }
+.pop label { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.pop label.chk { justify-content: flex-start; }
+.pop label[hidden] { display: none; }
+.pop select { flex: 1; max-width: 170px; padding: 5px 6px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font: inherit; }
+.pop-b { display: flex; gap: 8px; }
+.pop-b button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); cursor: pointer; font-weight: 600; font-size: 13px; }
+.pop-b button:hover { border-color: var(--accent); }
+.pop-b button:disabled { opacity: .5; cursor: progress; }
+.pop-s { font-size: 12px; color: var(--muted); }
+#minimap {
+  position: absolute; right: 16px; bottom: 16px; width: 200px; height: 136px; z-index: 10;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); cursor: pointer;
+}
+.hint { position: absolute; right: 16px; top: 14px; color: var(--muted); font-size: 12px; z-index: 5; pointer-events: none; transition: opacity .6s; }
+.hint.gone { opacity: 0; }
+
+/* ---------- detail drawer ---------- */
+#detail {
+  width: 440px; flex: none; background: var(--panel); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; min-height: 0; z-index: 20;
+}
+#detail[hidden] { display: none; }
+.d-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-start; }
+.d-head h2 { margin: 2px 0 2px; font-size: 18px; line-height: 1.3; }
+.d-head .close { margin-left: auto; border: 0; background: var(--panel-2); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; flex: none; font-size: 16px; }
+.d-body { overflow: auto; flex: 1; padding: 14px 18px 28px; }
+.d-route { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); word-break: break-all; }
+.d-notes { margin: 10px 0 14px; white-space: pre-wrap; }
+.d-img { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel-2); margin-bottom: 18px; }
+.d-img { position: relative; }
+.d-img img { display: block; width: 100%; height: auto; }
+.d-hs {
+  position: absolute; border: 2px solid var(--c); border-radius: 6px; cursor: pointer; padding: 0;
+  background: color-mix(in srgb, var(--c) 14%, transparent); transition: background .15s;
+}
+.d-hs:hover { background: color-mix(in srgb, var(--c) 32%, transparent); }
+.d-hs span {
+  position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); white-space: nowrap;
+  font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--c); color: #fff; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+}
+.d-hs:hover span { opacity: 1; }
+.d-tip { color: var(--muted); font-size: 12px; margin: -10px 0 14px; }
+.d-sec { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin: 16px 0 6px; }
+.link {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; margin-bottom: 4px;
+  border: 1px solid var(--border); background: var(--panel-2); border-radius: 9px; cursor: pointer;
+}
+.link:hover { border-color: var(--accent); }
+.link .lt { font-weight: 600; }
+.link .la { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
+.empty { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 760px) {
+  #side { position: absolute; top: 0; bottom: 0; left: 0; box-shadow: var(--shadow); }
+  #detail { position: absolute; top: 0; bottom: 0; right: 0; width: 100%; }
+  #minimap, .hint { display: none; }
+  .toolbar { left: 12px; max-width: calc(100% - 24px); }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div class="side-head">
+      <h1 id="title"></h1>
+      <p id="desc"></p>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="search"><input id="q" type="search" placeholder="Search screens…  ( / )" autocomplete="off"></div>
+    <nav id="tree"></nav>
+  </aside>
+  <main id="stage">
+    <div id="world">
+      <div id="frames"></div>
+      <div id="cards"></div>
+      <svg id="edges" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="context-stroke"></path>
+          </marker>
+        </defs>
+        <g id="paths"></g>
+      </svg>
+      <div id="labels"></div>
+    </div>
+    <button class="tb" id="side-toggle" title="Toggle sidebar">☰</button>
+    <div class="hint">Drag to pan · scroll / pinch to zoom · drag screens or group headings to rearrange</div>
+    <div class="toolbar">
+      <button class="tb" id="zoom-out" title="Zoom out (-)">−</button>
+      <button class="tb zoom" id="zoom-val" title="Reset to 100%">100%</button>
+      <button class="tb" id="zoom-in" title="Zoom in (+)">+</button>
+      <button class="tb" id="fit" title="Fit all (F)">Fit</button>
+      <span class="sep"></span>
+      <button class="tb" id="t-labels" aria-pressed="true" title="Show arrow labels">Labels</button>
+      <button class="tb" id="t-cross" aria-pressed="true" title="Show links between groups">Cross-group</button>
+      <button class="tb" id="t-back" aria-pressed="true" title="Show back links">Back links</button>
+      <button class="tb" id="t-hotspots" aria-pressed="true" title="Start arrows at the button or area that is tapped (H)" hidden>Hotspots</button>
+      <span class="sep" id="reset-sep" hidden></span>
+      <button class="tb" id="reset" hidden title="Undo your manual moves">Reset layout</button>
+      <span class="sep"></span>
+      <button class="tb" id="export" title="Download as PNG or PDF">Export</button>
+    </div>
+    <canvas id="minimap" width="400" height="272"></canvas>
+    <div class="pop" id="export-pop" hidden>
+      <div class="pop-h">Export</div>
+      <label>Area <select id="x-scope"></select></label>
+      <label>Theme <select id="x-theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="chk" id="x-pages-row"><input type="checkbox" id="x-pages" checked> PDF: one extra page per group</label>
+      <div class="pop-b"><button id="x-png">Download PNG</button><button id="x-pdf">Download PDF</button></div>
+      <div class="pop-s" id="x-status">Uses the current toggles (labels, links, hotspots).</div>
+    </div>
+  </main>
+  <section id="detail" hidden>
+    <div class="d-head">
+      <div style="min-width:0">
+        <div class="kind" id="d-group"></div>
+        <h2 id="d-title"></h2>
+        <div class="d-route" id="d-route"></div>
+      </div>
+      <button class="close" id="d-close" title="Close (Esc)">✕</button>
+    </div>
+    <div class="d-body" id="d-body"></div>
+  </section>
+</div>
+
+<script>
+const DATA = /*__FLOW_DATA__*/null;
+(() => {
+'use strict';
+const C = {
+  colGap: 150, rowGap: 80, gridGap: 70, groupPad: 44, groupHead: 100, groupGap: 150, tierGap: 220,
+  header: 44, portraitW: 260, landscapeW: 520, maxPortraitH: 620, maxLandscapeH: 720,
+};
+const PALETTE = ['#3563e9', '#e2632d', '#16a34a', '#a142f4', '#d4a017', '#0e9fb0', '#e0457b', '#5b6b8a', '#8a5a2b', '#2f9e7e'];
+const $ = (id) => document.getElementById(id);
+const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+/* ---------- model ---------- */
+const D = DATA || { title: 'Screen flow', groups: [], screens: [], edges: [] };
+const groups = (D.groups || []).map((g, i) => ({ kind: 'feature', ...g, index: i, color: g.color || PALETTE[i % PALETTE.length], screens: [] }));
+const groupById = new Map(groups.map(g => [g.id, g]));
+const screens = (D.screens || []).map((s, i) => ({ ...s, index: i }));
+const byId = new Map(screens.map(s => [s.id, s]));
+for (const s of screens) {
+  if (!groupById.has(s.group)) {
+    const g = { id: s.group || 'other', label: s.group || 'Other', kind: 'feature', index: groups.length, color: PALETTE[groups.length % PALETTE.length], screens: [] };
+    groups.push(g); groupById.set(g.id, g); s.group = g.id;
+  }
+  groupById.get(s.group).screens.push(s);
+}
+const edges = (D.edges || [])
+  .filter(e => byId.has(e.from) && byId.has(e.to) && e.from !== e.to)
+  .map((e, i) => ({ kind: 'nav', ...e, i, cross: byId.get(e.from).group !== byId.get(e.to).group }));
+const live = groups.filter(g => g.screens.length);
+
+for (const s of screens) {
+  const w = s.w || 390, h = s.h || 844;
+  const portrait = h >= w;
+  s.cw = portrait ? C.portraitW : C.landscapeW;
+  const full = Math.round(s.cw * h / w);
+  const max = portrait ? C.maxPortraitH : C.maxLandscapeH;
+  s.fullIh = full;
+  s.cropped = full > max;
+  s.ih = Math.min(full, max);
+  s.ch = s.ih + C.header;
+}
+
+/* ---------- layout: inside a group ---------- */
+function layeredColumns(g) {
+  const ids = new Set(g.screens.map(s => s.id));
+  const out = new Map(), inc = new Map();
+  g.screens.forEach(s => { out.set(s.id, []); inc.set(s.id, []); });
+  for (const e of edges) {
+    if (e.kind === 'back' || !ids.has(e.from) || !ids.has(e.to)) continue;
+    out.get(e.from).push(e.to); inc.get(e.to).push(e.from);
+  }
+  const fromOutside = new Set(edges.filter(e => !ids.has(e.from) && ids.has(e.to)).map(e => e.to));
+  let roots = g.screens.filter(s => s.entry);
+  if (!roots.length) roots = g.screens.filter(s => fromOutside.has(s.id) && !inc.get(s.id).length);
+  if (!roots.length) roots = g.screens.filter(s => !inc.get(s.id).length);
+  if (!roots.length) roots = [g.screens[0]];
+  const layer = new Map();
+  const bfs = (starts, base) => {
+    const q = [];
+    for (const s of starts) if (!layer.has(s.id)) { layer.set(s.id, base); q.push(s.id); }
+    while (q.length) {
+      const id = q.shift();
+      for (const t of out.get(id)) if (!layer.has(t)) { layer.set(t, layer.get(id) + 1); q.push(t); }
+    }
+  };
+  bfs(roots, 0);
+  for (const s of g.screens) {
+    if (layer.has(s.id)) continue;
+    const preds = inc.get(s.id).filter(p => layer.has(p));
+    bfs([s], preds.length ? Math.max(...preds.map(p => layer.get(p))) + 1 : 0);
+  }
+  for (const s of g.screens) if (Number.isInteger(s.column) && s.column >= 0) layer.set(s.id, s.column);
+  const maxL = Math.max(...layer.values());
+  const cols = Array.from({ length: maxL + 1 }, () => []);
+  g.screens.forEach(s => cols[layer.get(s.id)].push(s));
+  const pos = new Map();
+  const setPos = (col) => col.forEach((s, i) => pos.set(s.id, (i + .5) / col.length));
+  setPos(cols[0]);
+  for (let l = 1; l < cols.length; l++) {
+    for (const s of cols[l]) {
+      const ps = inc.get(s.id).filter(p => pos.has(p));
+      s._bc = ps.length ? ps.reduce((a, p) => a + pos.get(p), 0) / ps.length : 2;
+    }
+    cols[l].sort((a, b) => (a._bc - b._bc) || (a.index - b.index));
+    setPos(cols[l]);
+  }
+  return cols.filter(c => c.length);
+}
+
+function layoutGroup(g) {
+  const mode = g.layout || (g.kind === 'nav' ? 'row' : 'flow');
+  let cols, gap = C.colGap, align = 'center';
+  if (mode === 'row') { cols = g.screens.map(s => [s]); gap = C.colGap * .8; align = 'top'; }
+  else if (mode === 'grid') {
+    const per = Math.max(1, Math.ceil(Math.sqrt(g.screens.length * 1.6)));
+    cols = Array.from({ length: Math.min(per, g.screens.length) }, () => []);
+    g.screens.forEach((s, i) => cols[i % per].push(s));
+    gap = C.gridGap; align = 'top';
+  } else cols = layeredColumns(g);
+  const colH = cols.map(c => c.reduce((a, s) => a + s.ch, 0) + C.rowGap * (c.length - 1));
+  const H = Math.max(...colH);
+  let x = 0;
+  cols.forEach((c, ci) => {
+    const cw = Math.max(...c.map(s => s.cw));
+    let y = align === 'top' ? 0 : (H - colH[ci]) / 2;
+    for (const s of c) { s.lx = x + (cw - s.cw) / 2; s.ly = y; y += s.ch + C.rowGap; }
+    x += cw + gap;
+  });
+  g.w = x - gap; g.h = H;
+  g.fw = g.w + 2 * C.groupPad; g.fh = g.h + C.groupHead + C.groupPad;
+}
+
+/* ---------- layout: groups on the canvas ---------- */
+function layoutAll() {
+  live.forEach(layoutGroup);
+  const gEdges = edges.filter(e => e.cross && e.kind !== 'back');
+  const groupOf = id => byId.get(id).group;
+  let tier = live.filter(g => g.kind === 'nav');
+  if (!tier.length) {
+    const hasIn = new Set(gEdges.map(e => groupOf(e.to)));
+    tier = live.filter(g => !hasIn.has(g.id));
+    if (!tier.length) tier = live.slice(0, 1);
+  }
+  const placed = new Set();
+  let y = 0, rowLimit = Infinity, first = true;
+  const center = g => g.x + g.fw / 2;
+  while (tier.length) {
+    const anchors = new Map();
+    for (const g of tier) {
+      const xs = gEdges.filter(e => groupOf(e.to) === g.id && placed.has(groupOf(e.from)))
+        .map(e => { const s = byId.get(e.from); return s.x + s.cw / 2; });
+      let a = xs.length ? xs.reduce((p, v) => p + v, 0) / xs.length : null;
+      if (a == null && g.parent && placed.has(g.parent)) a = center(groupById.get(g.parent));
+      anchors.set(g.id, a);
+    }
+    const sorted = [...tier].sort((p, q) => {
+      const ap = anchors.get(p.id), aq = anchors.get(q.id);
+      if (ap == null && aq == null) return p.index - q.index;
+      if (ap == null) return 1; if (aq == null) return -1;
+      return (ap - aq) || (p.index - q.index);
+    });
+    let cursor = 0, rowTop = y, rowH = 0;
+    for (const g of sorted) {
+      const a = anchors.get(g.id);
+      let x = a == null ? cursor : Math.max(cursor, a - g.fw / 2);
+      if (x + g.fw > rowLimit && cursor > 0) {
+        rowTop += rowH + C.groupGap; rowH = 0; cursor = 0;
+        x = a == null ? 0 : Math.max(0, Math.min(a - g.fw / 2, rowLimit - g.fw));
+      }
+      g.x = x; g.y = rowTop;
+      cursor = x + g.fw + C.groupGap; rowH = Math.max(rowH, g.fh);
+      for (const s of g.screens) { s.x = Math.round(g.x + C.groupPad + s.lx); s.y = Math.round(g.y + C.groupHead + s.ly); }
+      placed.add(g.id);
+    }
+    if (first) {
+      // Aim for a landscape canvas: row width from the total area of all groups.
+      const area = live.reduce((t, g) => t + (g.fw + C.groupGap) * (g.fh + C.groupGap), 0);
+      rowLimit = Math.max(cursor - C.groupGap, 2600, Math.sqrt(area * 1.8));
+      first = false;
+    }
+    y = rowTop + rowH + C.tierGap;
+    tier = live.filter(g => !placed.has(g.id) && gEdges.some(e => groupOf(e.to) === g.id && placed.has(groupOf(e.from))));
+    if (!tier.length) tier = live.filter(g => !placed.has(g.id));
+  }
+  for (const s of screens) { s.ax = s.x; s.ay = s.y; }
+}
+
+/* ---------- persisted manual moves ---------- */
+const STORE = 'screen-flow:' + (D.title || '') + ':' + screens.map(s => s.id).join(',').length + ':' + (D.generatedAt || '');
+function loadMoves() { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } }
+function saveMoves() {
+  const m = {};
+  for (const s of screens) if (s.x !== s.ax || s.y !== s.ay) m[s.id] = [Math.round(s.x), Math.round(s.y)];
+  try { localStorage.setItem(STORE, JSON.stringify(m)); } catch {}
+  const any = Object.keys(m).length > 0;
+  $('reset').hidden = $('reset-sep').hidden = !any;
+}
+
+/* ---------- render ---------- */
+const edgeColor = e => e.cross ? groupById.get(byId.get(e.to).group).color : getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3563e9';
+const hasHotspots = edges.some(e => e.hotspot);
+let hotspotMode = hasHotspots;
+try { const v = localStorage.getItem('screen-flow:hotspots'); if (v !== null && hasHotspots) hotspotMode = v === '1'; } catch {}
+/* World rect of an edge's hotspot, or null when the mode is off or the spot is cropped away. */
+function hsRect(e) {
+  if (!hotspotMode || !e.hotspot) return null;
+  const s = byId.get(e.from), r = e.hotspot;
+  const t = r.y * s.fullIh, h = r.h * s.fullIh;
+  if (t + h / 2 > s.ih - 6) return null;
+  return { l: s.x + r.x * s.cw, t: s.y + C.header + t, r: s.x + (r.x + r.w) * s.cw, b: s.y + C.header + Math.min(t + h, s.ih) };
+}
+const frameEls = new Map(), cardEls = new Map(), edgeEls = [], labelEls = [];
+function buildDom() {
+  $('title').textContent = D.title || 'Screen flow';
+  document.title = D.title || 'Screen flow';
+  $('desc').textContent = D.description || '';
+  $('desc').hidden = !D.description;
+  const meta = [];
+  if (D.scope) meta.push(D.scope === 'feature' ? 'Feature flow' : 'Whole app');
+  if (D.platform) meta.push(D.platform);
+  meta.push(screens.length + ' screens', edges.length + ' links');
+  if (D.generatedAt) meta.push(D.generatedAt.slice(0, 10));
+  meta.forEach(t => $('meta').append(mk('span', '', t)));
+
+  for (const g of live) {
+    const f = mk('div', 'frame kind-' + g.kind); f.style.setProperty('--g', g.color);
+    const h = mk('div', 'frame-h'); h.append(mk('b', '', g.label || g.id));
+    if (g.description) h.append(mk('span', '', g.description));
+    const grip = mk('div', 'frame-grip'); grip.dataset.gid = g.id; grip.style.height = (C.groupHead - 22) + 'px';
+    grip.title = 'Drag to move this group · click to zoom to it';
+    f.append(h, grip); $('frames').append(f); frameEls.set(g.id, f);
+  }
+  for (const s of screens) {
+    const g = groupById.get(s.group);
+    const c = mk('div', 'card'); c.dataset.id = s.id; c.style.width = s.cw + 'px';
+    const h = mk('div', 'card-h');
+    const d = mk('span', 'dot'); d.style.background = g.color; h.append(d, mk('span', 't', s.title || s.id));
+    if (s.route) h.append(mk('span', 'r', s.route));
+    const box = mk('div', 'card-img' + (s.cropped ? ' cropped' : '')); box.style.height = s.ih + 'px';
+    if (s.src) { const img = mk('img'); img.src = s.src; img.alt = s.title || s.id; img.draggable = false; img.decoding = 'async'; box.append(img); }
+    else box.append(mk('div', 'noimg', 'No screenshot captured'));
+    for (const e of edges) {
+      if (e.from !== s.id || !e.hotspot) continue;
+      const hs = mk('div', 'hs'), r = e.hotspot;
+      Object.assign(hs.style, { left: r.x * s.cw + 'px', top: r.y * s.fullIh + 'px', width: r.w * s.cw + 'px', height: r.h * s.fullIh + 'px' });
+      hs.style.setProperty('--c', edgeColor(e));
+      box.append(hs); e.hsEl = hs;
+    }
+    c.append(h, box);
+    const badges = mk('div', 'badges');
+    if (s.entry) badges.append(mk('span', 'badge', 'Entry'));
+    if (s.state) badges.append(mk('span', 'badge state', s.state));
+    if (badges.children.length) c.append(badges);
+    $('cards').append(c); cardEls.set(s.id, c);
+    c.addEventListener('pointerenter', () => hover(s.id));
+    c.addEventListener('pointerleave', () => hover(null));
+  }
+  for (const e of edges) {
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('class', 'e kind-' + e.kind + (e.cross ? ' cross' : ''));
+    if (e.cross) p.style.stroke = edgeColor(e);
+    $('paths').append(p); edgeEls.push(p);
+    const l = mk('div', 'lbl kind-' + e.kind + (e.cross ? ' cross' : ''), e.label || '');
+    if (!e.label) l.style.display = 'none';
+    $('labels').append(l); labelEls.push(l);
+  }
+  buildTree();
+}
+function measure() {
+  edges.forEach((e, i) => { if (e.label) { e.lw = labelEls[i].offsetWidth; e.lh = labelEls[i].offsetHeight; } });
+  for (const g of live) { const h = frameEls.get(g.id).firstChild; g.hw = [...h.children].reduce((a, c) => a + c.offsetWidth, 0) + 10 * (h.children.length - 1); }
+}
+
+function placeCards(fast = false) {
+  for (const s of screens) { const c = cardEls.get(s.id); c.style.left = s.x + 'px'; c.style.top = s.y + 'px'; }
+  for (const g of live) {
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const s of g.screens) { l = Math.min(l, s.x); t = Math.min(t, s.y); r = Math.max(r, s.x + s.cw); b = Math.max(b, s.y + s.ch); }
+    g.bx = l - C.groupPad; g.by = t - C.groupHead; g.bw = r - l + 2 * C.groupPad; g.bh = b - t + C.groupHead + C.groupPad;
+    const f = frameEls.get(g.id);
+    Object.assign(f.style, { left: g.bx + 'px', top: g.by + 'px', width: g.bw + 'px', height: g.bh + 'px' });
+  }
+  routeEdges(fast);
+  drawMinimap();
+}
+
+/* ---------- edge routing ----------
+ * Orthogonal routes (horizontal + vertical segments, rounded corners) found with A* on a sparse
+ * grid built from the card outlines, so lines go around screens and group headings.
+ * Then overlapping parallel segments are spread into lanes and labels are placed where they
+ * do not cover cards, other labels or other lines. */
+const R = { margin: 22, bend: 60, lane: 10, radius: 14, reuse: 0.6 };
+const rectOf = s => ({ l: s.x, t: s.y, r: s.x + s.cw, b: s.y + s.ch, cx: s.x + s.cw / 2, cy: s.y + s.ch / 2 });
+const SIDE_DIR = { r: 0, b: 1, l: 2, t: 3 };           // outward direction of a side
+const DV = [[1, 0], [0, 1], [-1, 0], [0, -1]];          // right, down, left, up
+let routeCost = 0;
+
+function blockedBetween(a, b, sa, sb) {
+  const lo = Math.min(a.cx, b.cx), hi = Math.max(a.cx, b.cx);
+  return screens.some(s => {
+    if (s === sa || s === sb) return false;
+    const r = rectOf(s);
+    return r.cx > lo && r.cx < hi && r.t < Math.max(a.b, b.b) && r.b > Math.min(a.t, b.t);
+  });
+}
+/* For an arrow that starts at a hotspot: leave the card through the nearest edge, preferring
+   edges that face the target, so the line crosses as little of the screenshot as possible. */
+let usedExits = [];
+function hotspotSide(e, a, b) {
+  const h = e.hsr, top = a.t + C.header;
+  const dist = { l: h.l - a.l, r: a.r - h.r, t: h.t - top, b: a.b - h.b };
+  const facing = { l: b.r <= a.l, r: b.l >= a.r, t: b.b <= a.t, b: b.t >= a.b };
+  const away = { l: b.l >= a.r, r: b.r <= a.l, t: b.t >= a.b, b: b.b <= a.t };
+  const cand = ['r', 'l', 'b', 't'].map(side => ({ side, sc: dist[side] * 2 + (facing[side] ? 0 : away[side] ? 360 : 100) }))
+    .sort((p, q) => p.sc - q.sc);
+  // Two hotspots must not leave through the same side on the same line.
+  for (const { side } of cand) {
+    const c = side === 'l' || side === 'r' ? (h.t + h.b) / 2 : (h.l + h.r) / 2;
+    if (usedExits.some(u => u.id === e.from && u.side === side && Math.abs(u.c - c) < 12)) continue;
+    usedExits.push({ id: e.from, side, c });
+    return side;
+  }
+  return cand[0].side;
+}
+function chooseSides(e) {
+  const [sa0, sb0] = baseSides(e);
+  if (!e.hsr) return [sa0, sb0];
+  const a = rectOf(byId.get(e.from)), b = rectOf(byId.get(e.to));
+  return [hotspotSide(e, a, b), sb0];
+}
+function baseSides(e) {
+  const sa = byId.get(e.from), sb = byId.get(e.to), a = rectOf(sa), b = rectOf(sb);
+  const gx = Math.max(b.l - a.r, a.l - b.r), gy = Math.max(b.t - a.b, a.t - b.b);
+  if (gx >= gy) {
+    if (Math.abs(a.t - b.t) < 40 && gx > 0 && blockedBetween(a, b, sa, sb)) return ['t', 't'];
+    return b.cx >= a.cx ? ['r', 'l'] : ['l', 'r'];
+  }
+  return b.cy >= a.cy ? ['b', 't'] : ['t', 'b'];
+}
+function assignPorts() {
+  usedExits = [];
+  const ends = new Map();
+  const add = (s, side, other, e, which) => {
+    const k = s.id + side; if (!ends.has(k)) ends.set(k, []);
+    ends.get(k).push({ s, side, other, e, which });
+  };
+  for (const e of edges) {
+    const [fa, fb] = chooseSides(e); e.sides = [fa, fb];
+    const a = byId.get(e.from), b = byId.get(e.to);
+    add(a, fa, rectOf(b), e, 0); add(b, fb, rectOf(a), e, 1);
+  }
+  for (const list of ends.values()) {
+    const { s, side } = list[0];
+    const vertical = side === 'l' || side === 'r';
+    // Same tie-breaker (edge index) on both cards keeps the two edges of a pair parallel.
+    list.sort((p, q) => (vertical ? p.other.cy - q.other.cy : p.other.cx - q.other.cx) || (p.e.i - q.e.i));
+    const r = rectOf(s);
+    const [lo, hi] = sideRange(s, side);
+    const mid = vertical ? Math.min(r.t + C.header + (r.b - r.t - C.header) * .42, (lo + hi) / 2) : (lo + hi) / 2;
+    const step = Math.min(34, (hi - lo) / Math.max(1, list.length));
+    list.forEach((it, i) => {
+      const off = Math.round(Math.max(lo, Math.min(hi, mid + (i - (list.length - 1) / 2) * step)));
+      let v = off;
+      if (!it.which && it.e.hsr) {                // arrow starts at a hotspot: leave the card level with it
+        const h = it.e.hsr;
+        v = Math.round(Math.max(lo, Math.min(hi, vertical ? (h.t + h.b) / 2 : (h.l + h.r) / 2)));
+      }
+      const pt = side === 'l' ? [r.l, v] : side === 'r' ? [r.r, v] : side === 't' ? [v, r.t] : [v, r.b];
+      it.e[it.which ? 'p1' : 'p0'] = pt;
+    });
+  }
+  alignPorts(ends);
+}
+function sideRange(s, side) {
+  const r = rectOf(s);
+  return side === 'l' || side === 'r' ? [r.t + C.header + 18, r.b - 18] : [r.l + 18, r.r - 18];
+}
+/* Move one end of an edge so both ends line up and the line runs straight (no small jog). */
+function alignPorts(ends) {
+  const coordAxis = side => (side === 'l' || side === 'r') ? 1 : 0;
+  const portsOn = (s, side) => (ends.get(s.id + side) || []).map(it => it.e[it.which ? 'p1' : 'p0']);
+  for (const e of edges) {
+    const [sa, sb] = e.sides;
+    const opposite = (sa === 'r' && sb === 'l') || (sa === 'l' && sb === 'r') || (sa === 'b' && sb === 't') || (sa === 't' && sb === 'b');
+    if (!opposite) continue;
+    const ax = coordAxis(sa), a = e.p0[ax], b = e.p1[ax];
+    if (a === b || Math.abs(a - b) > 120) continue;
+    const tryMove = (p, s, side, v) => {
+      const [lo, hi] = sideRange(s, side);
+      if (v < lo || v > hi) return false;
+      if (portsOn(s, side).some(q => q !== p && Math.abs(q[ax] - v) < 28)) return false;
+      p[ax] = v; return true;
+    };
+    tryMove(e.p1, byId.get(e.to), sb, a) || (!e.hsr && tryMove(e.p0, byId.get(e.from), sa, b));
+  }
+}
+const stubOf = (p, side) => { const d = DV[SIDE_DIR[side]]; return [p[0] + d[0] * R.margin, p[1] + d[1] * R.margin]; };
+
+function obstacles() {
+  const obs = screens.map(s => ({ l: s.x, t: s.y, r: s.x + s.cw, b: s.y + s.ch, m: R.margin }));
+  for (const g of live) if (g.hw) obs.push({ l: g.bx + 24, t: g.by + 16, r: g.bx + 24 + g.hw, b: g.by + 50, m: 14 });
+  return obs;
+}
+function lowerBound(a, v) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
+function uniqSorted(a) { a.sort((p, q) => p - q); const o = []; for (const v of a) if (!o.length || v - o[o.length - 1] > 0.5) o.push(v); return o; }
+function indexOf(a, v) { const i = lowerBound(a, v - 0.5); return i < a.length && Math.abs(a[i] - v) <= 0.5 ? i : -1; }
+
+function buildGrid(obs, ex, ey) {
+  let bx = [], by = [], L = Infinity, T = Infinity, Rr = -Infinity, B = -Infinity;
+  for (const o of obs) {
+    bx.push(o.l - o.m, o.r + o.m); by.push(o.t - o.m, o.b + o.m);
+    L = Math.min(L, o.l); T = Math.min(T, o.t); Rr = Math.max(Rr, o.r); B = Math.max(B, o.b);
+  }
+  bx.push(L - 140, Rr + 140); by.push(T - 140, B + 140);
+  const withMids = (a) => { a = uniqSorted(a); const out = [...a]; for (let i = 0; i < a.length - 1; i++) if (a[i + 1] - a[i] > 30) out.push(Math.round((a[i] + a[i + 1]) / 2)); return out; };
+  const xs = uniqSorted([...withMids(bx), ...ex]), ys = uniqSorted([...withMids(by), ...ey]);
+  const nx = xs.length, ny = ys.length, n = nx * ny;
+  if (n > 1.5e6) return null;
+  const node = new Uint8Array(n), hseg = new Uint8Array(n), vseg = new Uint8Array(n);
+  for (const o of obs) {
+    const zl = o.l - o.m + 2, zr = o.r + o.m - 2, zt = o.t - o.m + 2, zb = o.b + o.m - 2;
+    const i0 = lowerBound(xs, zl), i1 = lowerBound(xs, zr), j0 = lowerBound(ys, zt), j1 = lowerBound(ys, zb);
+    for (let j = j0; j < j1; j++) {
+      for (let i = i0; i < i1; i++) node[j * nx + i] = 1;
+      for (let i = Math.max(0, i0 - 1); i < Math.min(nx - 1, i1); i++) { const m = (xs[i] + xs[i + 1]) / 2; if (m > zl && m < zr) hseg[j * nx + i] = 1; }
+    }
+    for (let i = i0; i < i1; i++) {
+      for (let j = Math.max(0, j0 - 1); j < Math.min(ny - 1, j1); j++) { const m = (ys[j] + ys[j + 1]) / 2; if (m > zt && m < zb) vseg[j * nx + i] = 1; }
+    }
+  }
+  return { xs, ys, nx, ny, node, hseg, vseg, hUse: new Uint16Array(n), vUse: new Uint16Array(n) };
+}
+
+let AS = null;
+function astar(G, si, sj, sd, ti, tj, td) {
+  const { xs, ys, nx, ny } = G, N = nx * ny * 4;
+  if (!AS || AS.n < N) AS = { n: N, g: new Float64Array(N), seen: new Uint32Array(N), par: new Int32Array(N), stamp: 0 };
+  const S = AS; S.stamp++;
+  const tx = xs[ti], ty = ys[tj], goal = tj * nx + ti;
+  const hf = (i, j) => Math.abs(xs[i] - tx) + Math.abs(ys[j] - ty);
+  const hs = [], hp = [];   // binary heap: states + priorities
+  const push = (s, p) => {
+    let i = hs.length; hs.push(s); hp.push(p);
+    while (i > 0) { const q = (i - 1) >> 1; if (hp[q] <= p) break; hs[i] = hs[q]; hp[i] = hp[q]; i = q; }
+    hs[i] = s; hp[i] = p;
+  };
+  const pop = () => {
+    const s = hs[0], p = hp[0], ls = hs.pop(), lp = hp.pop();
+    if (hs.length) {
+      let i = 0; const n = hs.length;
+      for (;;) {
+        let c = 2 * i + 1; if (c >= n) break;
+        if (c + 1 < n && hp[c + 1] < hp[c]) c++;
+        if (hp[c] >= lp) break;
+        hs[i] = hs[c]; hp[i] = hp[c]; i = c;
+      }
+      hs[i] = ls; hp[i] = lp;
+    }
+    return [s, p];
+  };
+  const start = (sj * nx + si) * 4 + sd;
+  S.g[start] = 0; S.seen[start] = S.stamp; S.par[start] = -1; push(start, hf(si, sj));
+  let guard = 0;
+  while (hs.length && guard++ < 400000) {
+    const [st, f] = pop();
+    const nd0 = st >> 2, d = st & 3, i = nd0 % nx, j = (nd0 / nx) | 0, gc = S.g[st];
+    if (f - hf(i, j) > gc + 1e-6) continue;
+    if (nd0 === goal) return st;
+    for (let nd = 0; nd < 4; nd++) {
+      if (nd === ((d + 2) & 3)) continue;
+      const ni = i + DV[nd][0], nj = j + DV[nd][1];
+      if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
+      let blocked, use;
+      if (nd === 0) { blocked = G.hseg[j * nx + i]; use = G.hUse[j * nx + i]; }
+      else if (nd === 2) { blocked = G.hseg[j * nx + ni]; use = G.hUse[j * nx + ni]; }
+      else if (nd === 1) { blocked = G.vseg[j * nx + i]; use = G.vUse[j * nx + i]; }
+      else { blocked = G.vseg[nj * nx + i]; use = G.vUse[nj * nx + i]; }
+      if (blocked) continue;
+      const nn = nj * nx + ni;
+      if (G.node[nn] && nn !== goal) continue;
+      const len = Math.abs(xs[ni] - xs[i]) + Math.abs(ys[nj] - ys[j]);
+      let c = gc + len * (1 + use * R.reuse) + (nd !== d ? R.bend : 0);
+      if (nn === goal && nd !== td) c += R.bend;
+      const ns = nn * 4 + nd;
+      if (S.seen[ns] !== S.stamp || c < S.g[ns]) { S.seen[ns] = S.stamp; S.g[ns] = c; S.par[ns] = st; push(ns, c + hf(ni, nj)); }
+    }
+  }
+  return -1;
+}
+
+function routeOnGrid(G, e) {
+  const s0 = stubOf(e.p0, e.sides[0]), s1 = stubOf(e.p1, e.sides[1]);
+  const si = indexOf(G.xs, s0[0]), sj = indexOf(G.ys, s0[1]), ti = indexOf(G.xs, s1[0]), tj = indexOf(G.ys, s1[1]);
+  if (si < 0 || sj < 0 || ti < 0 || tj < 0) return null;
+  const end = astar(G, si, sj, SIDE_DIR[e.sides[0]], ti, tj, (SIDE_DIR[e.sides[1]] + 2) & 3);
+  if (end < 0) return null;
+  const nodes = [];
+  for (let st = end; st !== -1; st = AS.par[st]) nodes.push(st >> 2);
+  nodes.reverse();
+  const nx = G.nx, pts = [[e.p0[0], e.p0[1]]];
+  for (let k = 0; k < nodes.length; k++) {
+    const a = nodes[k]; pts.push([G.xs[a % nx], G.ys[(a / nx) | 0]]);
+    if (k) {
+      const p = nodes[k - 1], pi = p % nx, pj = (p / nx) | 0, ai = a % nx, aj = (a / nx) | 0;
+      if (pj === aj) G.hUse[aj * nx + Math.min(pi, ai)]++; else G.vUse[Math.min(pj, aj) * nx + ai]++;
+    }
+  }
+  pts.push([e.p1[0], e.p1[1]]);
+  return pts;
+}
+
+function simpleRoute(e) {
+  const s0 = stubOf(e.p0, e.sides[0]), s1 = stubOf(e.p1, e.sides[1]);
+  const pts = [[...e.p0], s0];
+  const horiz = e.sides[0] === 'l' || e.sides[0] === 'r';
+  if (e.sides[0] === e.sides[1]) {
+    if (horiz) { const x = e.sides[0] === 'r' ? Math.max(s0[0], s1[0]) : Math.min(s0[0], s1[0]); pts.push([x, s0[1]], [x, s1[1]]); }
+    else { const y = e.sides[0] === 'b' ? Math.max(s0[1], s1[1]) : Math.min(s0[1], s1[1]); pts.push([s0[0], y], [s1[0], y]); }
+  } else if (horiz) { const x = Math.round((s0[0] + s1[0]) / 2); pts.push([x, s0[1]], [x, s1[1]]); }
+  else { const y = Math.round((s0[1] + s1[1]) / 2); pts.push([s0[0], y], [s1[0], y]); }
+  pts.push(s1, [...e.p1]);
+  return pts;
+}
+
+function simplify(pts) {
+  const out = [];
+  for (const p of pts) {
+    const q = out[out.length - 1];
+    if (q && Math.abs(q[0] - p[0]) < 0.5 && Math.abs(q[1] - p[1]) < 0.5) continue;
+    out.push([p[0], p[1]]);
+    while (out.length >= 3) {
+      const [a, b, c] = out.slice(-3);
+      const col = (Math.abs(a[0] - b[0]) < 0.5 && Math.abs(b[0] - c[0]) < 0.5) || (Math.abs(a[1] - b[1]) < 0.5 && Math.abs(b[1] - c[1]) < 0.5);
+      if (!col) break;
+      out.splice(out.length - 2, 1);
+    }
+  }
+  return out;
+}
+
+/* Spread segments that share a line and overlap into parallel lanes. */
+function nudge() {
+  for (const ax of [1, 0]) {               // 1: horizontal segments (move y), 0: vertical segments (move x)
+    const segs = [];
+    for (const e of edges) {
+      const p = e.pts;
+      for (let k = 0; k < p.length - 1; k++) {
+        const a = p[k], b = p[k + 1];
+        if (Math.abs(a[ax] - b[ax]) > 0.5) continue;      // not parallel to this axis
+        if (Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) < 0.5) continue;   // joint
+        const o = 1 - ax;
+        segs.push({ e, k, c: a[ax], lo: Math.min(a[o], b[o]), hi: Math.max(a[o], b[o]), fixed: k === 0 || k === p.length - 2 || k < (e.fixedUpTo || 0) });
+      }
+    }
+    segs.sort((p, q) => p.c - q.c || p.lo - q.lo);
+    for (let i = 0; i < segs.length;) {
+      let j = i; while (j < segs.length && Math.abs(segs[j].c - segs[i].c) < 4) j++;   // lines < 4px apart look shared
+      for (let k = i; k < j;) {
+        let hi = segs[k].hi, m = k + 1;
+        while (m < j && segs[m].lo < hi - 1) { hi = Math.max(hi, segs[m].hi); m++; }
+        const cl = segs.slice(k, m).filter((s, idx, arr) => arr.findIndex(t => t.e === s.e) === idx);
+        if (cl.length > 1) spread(cl, ax);
+        k = m;
+      }
+      i = j;
+    }
+  }
+}
+/* Free space around coordinate c (on axis ax) along the span [lo, hi] of the other axis. */
+function freeInterval(ax, c, lo, hi) {
+  let fLo = -Infinity, fHi = Infinity;
+  for (const o of nudgeObs) {
+    const oLo = ax ? o.l : o.t, oHi = ax ? o.r : o.b;          // extent along the segment
+    if (oHi <= lo || oLo >= hi) continue;
+    const a = ax ? o.t : o.l, b = ax ? o.b : o.r;              // extent across the segment
+    if (b <= c) fLo = Math.max(fLo, b); else if (a >= c) fHi = Math.min(fHi, a);
+  }
+  return [fLo, fHi];
+}
+let nudgeObs = [];
+function spread(cl, ax) {
+  const n = cl.length, c = cl[0].c;
+  const lo = Math.min(...cl.map(s => s.lo)), hi = Math.max(...cl.map(s => s.hi));
+  const [fLo, fHi] = freeInterval(ax, c, lo, hi);
+  const room = Math.max(0, fHi - fLo - 12);
+  const step = Math.min(R.lane, room / (n - 1));
+  const key = s => { const p = s.e.pts; const a = p[s.k - 1] || p[s.k], b = p[s.k + 2] || p[s.k + 1]; return a[ax] + b[ax]; };
+  cl.sort((p, q) => key(p) - key(q) || p.e.i - q.e.i);
+  const fi = cl.findIndex(s => s.fixed);
+  const width = (n - 1) * step;
+  let start;
+  if (fi >= 0) start = c - fi * step;
+  else start = Math.max(fLo + 6, Math.min(fHi - 6 - width, c - width / 2));
+  cl.forEach((s, i) => {
+    if (s.fixed) return;
+    const v = Math.round(start + i * step);
+    s.e.pts[s.k][ax] = v; s.e.pts[s.k + 1][ax] = v;
+  });
+}
+
+function roundedPath(p) {
+  let d = `M${p[0][0]},${p[0][1]}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const a = p[i - 1], c = p[i], b = p[i + 1];
+    const l1 = Math.hypot(c[0] - a[0], c[1] - a[1]), l2 = Math.hypot(b[0] - c[0], b[1] - c[1]);
+    if (!l1 || !l2) continue;
+    const r = Math.min(R.radius, l1 / 2, l2 / 2);
+    d += ` L${c[0] - (c[0] - a[0]) / l1 * r},${c[1] - (c[1] - a[1]) / l1 * r}`;
+    d += ` Q${c[0]},${c[1]} ${c[0] + (b[0] - c[0]) / l2 * r},${c[1] + (b[1] - c[1]) / l2 * r}`;
+  }
+  const z = p[p.length - 1];
+  return d + ` L${z[0]},${z[1]}`;
+}
+
+function placeLabels() {
+  const hit = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+  const area = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+  const cards = screens.map(s => ({ l: s.x - 6, t: s.y - 6, r: s.x + s.cw + 6, b: s.y + s.ch + 6 }));
+  for (const g of live) if (g.hw) cards.push({ l: g.bx + 20, t: g.by + 12, r: g.bx + 28 + g.hw, b: g.by + 54 });
+  const lines = [];
+  edges.forEach(e => { for (let k = 0; k < e.pts.length - 1; k++) lines.push({ e, a: e.pts[k], b: e.pts[k + 1] }); });
+  const placed = [];
+  const order = edges.filter(e => e.label && e.lw).sort((p, q) => p.pts.length - q.pts.length || p.i - q.i);
+  for (const e of order) {
+    const w = e.lw, h = e.lh, p = e.pts, cands = [];
+    for (let k = 0; k < p.length - 1; k++) {
+      const a = p[k], b = p[k + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const inner = k > 0 && k < p.length - 2;
+      const horiz = Math.abs(a[1] - b[1]) < 0.5;
+      const fits = horiz ? len > w + 24 : len > h + 24;
+      const base = (fits ? 0 : 60) + (inner ? 0 : 25) - Math.min(len, 400) / 40;
+      for (const [t, pen] of [[.5, 0], [.32, 2], [.68, 2], [.2, 5], [.8, 5]]) cands.push({ x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, pen: base + pen });
+    }
+    let best = null, bestScore = Infinity;
+    for (const c of cands) {
+      const r = { l: c.x - w / 2 - 4, t: c.y - h / 2 - 3, r: c.x + w / 2 + 4, b: c.y + h / 2 + 3 };
+      let score = c.pen;
+      for (const q of cards) if (hit(r, q)) score += 2000 + area(r, q);
+      for (const q of placed) if (hit(r, q)) score += 1500 + area(r, q);
+      for (const ln of lines) {
+        if (ln.e === e) continue;
+        const lr = { l: Math.min(ln.a[0], ln.b[0]) - 1, r: Math.max(ln.a[0], ln.b[0]) + 1, t: Math.min(ln.a[1], ln.b[1]) - 1, b: Math.max(ln.a[1], ln.b[1]) + 1 };
+        if (hit(r, lr)) score += 120;
+      }
+      if (score < bestScore) { bestScore = score; best = { c, r }; }
+    }
+    placed.push(best.r);
+    const el = labelEls[e.i];
+    el.style.left = best.c.x + 'px'; el.style.top = best.c.y + 'px';
+    e.lx = best.c.x; e.ly = best.c.y;
+  }
+}
+
+/* Start the route at the hotspot: run over the screenshot to the card edge, then follow the route. */
+function attachHotspot(e) {
+  const h = e.hsr, side = e.sides[0], p0 = e.pts[0], d = DV[SIDE_DIR[side]];
+  const cx = Math.round((h.l + h.r) / 2), cy = Math.round((h.t + h.b) / 2);
+  let pre;
+  if (side === 'l' || side === 'r') {
+    const sx = side === 'r' ? h.r : h.l;
+    if (Math.abs(cy - p0[1]) < 1) pre = [[sx, p0[1]]];
+    else { const xk = p0[0] - d[0] * 14; pre = [[sx, cy], [xk, cy], [xk, p0[1]]]; }
+  } else {
+    const sy = side === 'b' ? h.b : h.t;
+    if (Math.abs(cx - p0[0]) < 1) pre = [[p0[0], sy]];
+    else { const yk = p0[1] - d[1] * 14; pre = [[cx, sy], [cx, yk], [p0[0], yk]]; }
+  }
+  // The part over the screenshot is fixed; a zero-length joint just outside the card lets the rest
+  // shift into its own lane (nudge) if it would share a line with another arrow.
+  const route = e.pts, A = [p0[0] + d[0] * 10, p0[1] + d[1] * 10];
+  const head = simplify([...pre, [p0[0], p0[1]]]);
+  e.pts = [...head, A, [A[0], A[1]], ...route.slice(1)];
+  e.fixedUpTo = head.length;      // segments with index < this stay put
+}
+function routeEdges(fast = false) {
+  const t0 = performance.now();
+  for (const e of edges) { e.hsr = hsRect(e); e.fixedUpTo = 0; }
+  assignPorts();
+  let G = null;
+  if (!fast) {
+    const ex = [], ey = [];
+    for (const e of edges) {
+      for (const [p, side] of [[e.p0, e.sides[0]], [e.p1, e.sides[1]]]) {
+        const s = stubOf(p, side);
+        if (side === 'l' || side === 'r') { ex.push(s[0]); ey.push(s[1]); } else { ex.push(s[0]); ey.push(s[1]); }
+      }
+    }
+    G = buildGrid(obstacles(), ex, ey);
+  }
+  const span = e => Math.abs(e.p0[0] - e.p1[0]) + Math.abs(e.p0[1] - e.p1[1]);
+  for (const e of [...edges].sort((a, b) => span(a) - span(b))) {
+    e.pts = simplify((G && routeOnGrid(G, e)) || simpleRoute(e));
+    if (e.hsr) attachHotspot(e);
+  }
+  if (!fast) { nudgeObs = obstacles().map(o => ({ l: o.l - 2, t: o.t - 2, r: o.r + 2, b: o.b + 2 })); nudge(); }
+  for (const e of edges) e.pts = simplify(e.pts);
+  edges.forEach((e, i) => { edgeEls[i].setAttribute('d', roundedPath(e.pts)); if (e.hsEl) e.hsEl.classList.toggle('on', !!e.hsr); });
+  placeLabels();
+  if (!fast) routeCost = performance.now() - t0;
+}
+
+/* ---------- camera ---------- */
+const stage = $('stage'), world = $('world');
+const cam = { x: 0, y: 0, k: 1 };
+let anim = null;
+function applyCam() {
+  world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.k})`;
+  $('zoom-val').textContent = Math.round(cam.k * 100) + '%';
+  drawMinimap();
+}
+const clampK = k => Math.max(0.04, Math.min(4, k));
+function zoomAt(px, py, f) {
+  const k = clampK(cam.k * f), r = k / cam.k;
+  cam.x = px - (px - cam.x) * r; cam.y = py - (py - cam.y) * r; cam.k = k; applyCam();
+}
+function animateTo(t, ms = 320) {
+  cancelAnimationFrame(anim);
+  const s = { ...cam }, t0 = performance.now();
+  const step = (now) => {
+    const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+    cam.x = s.x + (t.x - s.x) * e; cam.y = s.y + (t.y - s.y) * e; cam.k = s.k + (t.k - s.k) * e; applyCam();
+    if (p < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+function worldBox() {
+  let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+  for (const g of live) { l = Math.min(l, g.bx); t = Math.min(t, g.by); r = Math.max(r, g.bx + g.bw); b = Math.max(b, g.by + g.bh); }
+  if (!isFinite(l)) return { l: 0, t: 0, r: 100, b: 100 };
+  return { l, t, r, b };
+}
+function viewFor(box, pad = 60, maxK = 1) {
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const k = clampK(Math.min((W - 2 * pad) / (box.r - box.l), (H - 2 * pad - 50) / (box.b - box.t), maxK));
+  return { k, x: W / 2 - (box.l + box.r) / 2 * k, y: (H - 50) / 2 - (box.t + box.b) / 2 * k };
+}
+function fitAll(animate = true) { const v = viewFor(worldBox()); animate ? animateTo(v) : (Object.assign(cam, v), applyCam()); }
+function focusScreen(id) {
+  const s = byId.get(id); const r = rectOf(s);
+  const W = stage.clientWidth, H = stage.clientHeight;
+  const k = clampK(Math.max(Math.min(cam.k, 1.1), Math.min(.9, (H - 140) / s.ch, (W * .6) / s.cw)));
+  animateTo({ k, x: W / 2 - r.cx * k, y: (H - 40) / 2 - r.cy * k });
+}
+function focusGroup(id) { const g = groupById.get(id); animateTo(viewFor({ l: g.bx, t: g.by, r: g.bx + g.bw, b: g.by + g.bh }, 50, 1.1)); }
+
+/* ---------- input: pan, zoom, drag ---------- */
+const pointers = new Map();
+let gesture = null;
+stage.addEventListener('pointerdown', (ev) => {
+  document.querySelector('.hint').classList.add('gone');
+  if (ev.target.closest('.toolbar, #minimap, #side-toggle, .pop')) return;
+  $('export-pop').hidden = true;
+  stage.setPointerCapture(ev.pointerId);
+  pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  cancelAnimationFrame(anim);
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    gesture = { type: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    return;
+  }
+  const grip = ev.target.closest('.frame-grip');
+  if (grip) {
+    const g = groupById.get(grip.dataset.gid);
+    gesture = { type: 'group', g, frame: frameEls.get(g.id), sx: ev.clientX, sy: ev.clientY, orig: g.screens.map(s => [s, s.x, s.y]), moved: false };
+    return;
+  }
+  const card = ev.target.closest('.card');
+  if (card) {
+    const s = byId.get(card.dataset.id);
+    gesture = { type: 'card', s, card, sx: ev.clientX, sy: ev.clientY, ox: s.x, oy: s.y, moved: false };
+  } else {
+    gesture = { type: 'pan', sx: ev.clientX, sy: ev.clientY, cx: cam.x, cy: cam.y, moved: false };
+    stage.classList.add('panning');
+  }
+});
+stage.addEventListener('pointermove', (ev) => {
+  if (!pointers.has(ev.pointerId)) return;
+  pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  if (!gesture) return;
+  if (gesture.type === 'pinch' && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const rect = stage.getBoundingClientRect();
+    cam.x += mx - gesture.mx; cam.y += my - gesture.my;
+    zoomAt(mx - rect.left, my - rect.top, d / gesture.d);
+    Object.assign(gesture, { d, mx, my });
+    return;
+  }
+  const dx = ev.clientX - gesture.sx, dy = ev.clientY - gesture.sy;
+  if (!gesture.moved && Math.hypot(dx, dy) < 4) return;
+  gesture.moved = true;
+  if (gesture.type === 'pan') { cam.x = gesture.cx + dx; cam.y = gesture.cy + dy; applyCam(); }
+  else if (gesture.type === 'card' || gesture.type === 'group') {
+    if (gesture.type === 'card') {
+      gesture.card.classList.add('dragging');
+      gesture.s.x = Math.round(gesture.ox + dx / cam.k); gesture.s.y = Math.round(gesture.oy + dy / cam.k);
+    } else {
+      gesture.frame.classList.add('dragging');
+      for (const [sc, x, y] of gesture.orig) { sc.x = Math.round(x + dx / cam.k); sc.y = Math.round(y + dy / cam.k); }
+    }
+    if (!gesture.raf) gesture.raf = requestAnimationFrame(() => { gesture.raf = 0; placeCards(routeCost > 30); });
+  }
+});
+const endPointer = (ev) => {
+  if (!pointers.has(ev.pointerId)) return;
+  pointers.delete(ev.pointerId);
+  stage.classList.remove('panning');
+  if (!gesture) return;
+  if (gesture.type === 'card') {
+    gesture.card.classList.remove('dragging');
+    if (gesture.moved) { cancelAnimationFrame(gesture.raf); placeCards(); saveMoves(); } else select(gesture.s.id, false);
+  } else if (gesture.type === 'group') {
+    gesture.frame.classList.remove('dragging');
+    if (gesture.moved) { cancelAnimationFrame(gesture.raf); placeCards(); saveMoves(); } else focusGroup(gesture.g.id);
+  } else if (gesture.type === 'pan' && !gesture.moved && ev.type === 'pointerup') select(null);
+  gesture = null;
+};
+stage.addEventListener('pointerup', endPointer);
+stage.addEventListener('pointercancel', endPointer);
+stage.addEventListener('wheel', (ev) => {
+  if (ev.target.closest('.toolbar, .pop')) return;
+  ev.preventDefault();
+  cancelAnimationFrame(anim);
+  const rect = stage.getBoundingClientRect();
+  const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+  const unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 400 : 1;
+  const dx = ev.deltaX * unit, dy = ev.deltaY * unit;
+  // Pinch (ctrlKey) or a classic mouse wheel zooms; trackpad two-finger scroll pans.
+  const mouseWheel = ev.deltaMode !== 0 || (ev.deltaX === 0 && Math.abs(ev.deltaY) >= 50 && Number.isInteger(ev.deltaY));
+  if (ev.ctrlKey || ev.metaKey || mouseWheel) zoomAt(px, py, Math.exp(-dy * (ev.ctrlKey ? 0.01 : 0.0022)));
+  else { cam.x -= ev.shiftKey ? dy : dx; cam.y -= ev.shiftKey ? 0 : dy; applyCam(); }
+}, { passive: false });
+
+/* ---------- hover + selection ---------- */
+let selected = null;
+function highlight(id) {
+  document.body.classList.toggle('focusing', !!id);
+  for (const c of cardEls.values()) c.classList.remove('hl');
+  edges.forEach((e, i) => {
+    const on = !!id && (e.from === id || e.to === id);
+    edgeEls[i].classList.toggle('hl', on); labelEls[i].classList.toggle('hl', on);
+    if (e.hsEl) e.hsEl.classList.toggle('hl', on);
+    if (on) { cardEls.get(e.from).classList.add('hl'); cardEls.get(e.to).classList.add('hl'); }
+  });
+}
+function hover(id) { if (gesture && gesture.moved) return; highlight(id || selected); }
+function select(id, move = true) {
+  if (selected) cardEls.get(selected).classList.remove('selected');
+  document.querySelectorAll('.s-btn.active').forEach(b => b.classList.remove('active'));
+  selected = id;
+  highlight(id);
+  try { history.replaceState(null, '', id ? '#' + encodeURIComponent(id) : location.pathname + location.search); } catch {}
+  if (!id) { $('detail').hidden = true; return; }
+  cardEls.get(id).classList.add('selected');
+  const btn = document.querySelector(`.s-btn[data-id="${CSS.escape(id)}"]`); if (btn) btn.classList.add('active');
+  renderDetail(byId.get(id));
+  if (move) focusScreen(id);
+}
+function linkBtn(s, action, dir) {
+  const b = mk('button', 'link');
+  const d = mk('span', 'dot'); d.style.background = groupById.get(s.group).color;
+  b.append(mk('span', '', dir), d, mk('span', 'lt', s.title || s.id));
+  if (action) b.append(mk('span', 'la', action));
+  b.addEventListener('click', () => select(s.id));
+  return b;
+}
+function renderDetail(s) {
+  const was = $('detail').hidden;
+  $('detail').hidden = false;
+  const g = groupById.get(s.group);
+  $('d-group').textContent = (g.label || g.id) + (g.kind === 'nav' ? ' · navigation' : '');
+  $('d-group').style.color = g.color;
+  $('d-title').textContent = s.title || s.id;
+  $('d-route').textContent = s.route || '';
+  const body = $('d-body'); body.replaceChildren(); body.scrollTop = 0;
+  if (s.state) body.append(mk('div', 'kind', 'State: ' + s.state));
+  if (s.notes) body.append(mk('p', 'd-notes', s.notes));
+  const box = mk('div', 'd-img');
+  if (s.src) { const img = mk('img'); img.src = s.src; img.alt = s.title || s.id; box.append(img); } else box.append(mk('div', 'empty', 'No screenshot captured'));
+  const spots = s.src ? edges.filter(e => e.from === s.id && e.hotspot) : [];
+  for (const e of spots) {
+    const r = e.hotspot, t = byId.get(e.to), b = mk('button', 'd-hs');
+    Object.assign(b.style, { left: r.x * 100 + '%', top: r.y * 100 + '%', width: r.w * 100 + '%', height: r.h * 100 + '%' });
+    b.style.setProperty('--c', edgeColor(e));
+    b.title = (e.label ? e.label + ' → ' : '→ ') + (t.title || t.id);
+    b.append(mk('span', '', b.title));
+    b.addEventListener('click', () => select(t.id));
+    box.append(b);
+  }
+  body.append(box);
+  if (spots.length) body.append(mk('div', 'd-tip', 'Click a highlighted area to follow that link.'));
+  const outs = edges.filter(e => e.from === s.id), ins = edges.filter(e => e.to === s.id);
+  body.append(mk('div', 'd-sec', 'Leads to'));
+  if (!outs.length) body.append(mk('div', 'empty', 'No outgoing links'));
+  outs.forEach(e => body.append(linkBtn(byId.get(e.to), e.label, '→')));
+  body.append(mk('div', 'd-sec', 'Reached from'));
+  if (!ins.length) body.append(mk('div', 'empty', 'No incoming links'));
+  ins.forEach(e => body.append(linkBtn(byId.get(e.from), e.label, '←')));
+  if (was) requestAnimationFrame(drawMinimap);
+}
+
+/* ---------- sidebar ---------- */
+function buildTree() {
+  const tree = $('tree');
+  const ordered = [...live].sort((a, b) => (a.kind === 'nav' ? 0 : 1) - (b.kind === 'nav' ? 0 : 1) || a.index - b.index);
+  for (const g of ordered) {
+    const wrap = mk('div', 'g-item');
+    const gb = mk('button', 'g-btn');
+    const d = mk('span', 'dot'); d.style.background = g.color;
+    gb.append(d, mk('span', '', g.label || g.id), mk('span', 'count', String(g.screens.length)));
+    gb.addEventListener('click', () => focusGroup(g.id));
+    wrap.append(gb);
+    for (const s of g.screens) {
+      const sb = mk('button', 's-btn', s.title || s.id); sb.dataset.id = s.id;
+      sb.dataset.q = [s.title, s.id, s.route, s.notes, g.label].filter(Boolean).join(' ').toLowerCase();
+      sb.addEventListener('click', () => select(s.id));
+      wrap.append(sb);
+    }
+    tree.append(wrap);
+  }
+  $('q').addEventListener('input', () => {
+    const q = $('q').value.trim().toLowerCase();
+    document.body.classList.toggle('searching', !!q);
+    document.querySelectorAll('.s-btn').forEach(b => {
+      const m = !q || b.dataset.q.includes(q);
+      b.classList.toggle('hidden-by-search', !m);
+      cardEls.get(b.dataset.id).classList.toggle('match', !!q && m);
+    });
+  });
+  $('q').addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { const b = document.querySelector('.s-btn:not(.hidden-by-search)'); if (b) select(b.dataset.id); }
+    if (ev.key === 'Escape') { $('q').value = ''; $('q').dispatchEvent(new Event('input')); $('q').blur(); }
+  });
+}
+
+/* ---------- minimap ---------- */
+const mm = $('minimap'), mctx = mm.getContext('2d');
+let mmT = null, mmQueued = false;
+function drawMinimap() {
+  if (mmQueued) return; mmQueued = true;
+  requestAnimationFrame(() => {
+    mmQueued = false;
+    if (!live.length || live[0].bx == null) return;
+    const box = worldBox(), W = mm.width, H = mm.height, pad = 16;
+    const s = Math.min((W - 2 * pad) / (box.r - box.l), (H - 2 * pad) / (box.b - box.t));
+    const ox = pad + (W - 2 * pad - (box.r - box.l) * s) / 2 - box.l * s, oy = pad + (H - 2 * pad - (box.b - box.t) * s) / 2 - box.t * s;
+    mmT = { s, ox, oy };
+    mctx.clearRect(0, 0, W, H);
+    const css = getComputedStyle(document.documentElement);
+    for (const g of live) {
+      mctx.fillStyle = g.color + '22'; mctx.strokeStyle = g.color + '88'; mctx.lineWidth = 1.5;
+      mctx.fillRect(ox + g.bx * s, oy + g.by * s, g.bw * s, g.bh * s);
+      mctx.strokeRect(ox + g.bx * s, oy + g.by * s, g.bw * s, g.bh * s);
+      mctx.fillStyle = g.color + 'aa';
+      for (const sc of g.screens) mctx.fillRect(ox + sc.x * s, oy + sc.y * s, Math.max(1, sc.cw * s), Math.max(1, sc.ch * s));
+    }
+    const vw = stage.clientWidth, vh = stage.clientHeight;
+    mctx.strokeStyle = css.getPropertyValue('--accent').trim() || '#3563e9'; mctx.lineWidth = 2;
+    mctx.strokeRect(ox + (-cam.x / cam.k) * s, oy + (-cam.y / cam.k) * s, (vw / cam.k) * s, (vh / cam.k) * s);
+  });
+}
+function minimapJump(ev) {
+  if (!mmT) return;
+  const r = mm.getBoundingClientRect();
+  const mx = (ev.clientX - r.left) * (mm.width / r.width), my = (ev.clientY - r.top) * (mm.height / r.height);
+  const wx = (mx - mmT.ox) / mmT.s, wy = (my - mmT.oy) / mmT.s;
+  cam.x = stage.clientWidth / 2 - wx * cam.k; cam.y = stage.clientHeight / 2 - wy * cam.k; applyCam();
+}
+let mmDrag = false;
+mm.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); mmDrag = true; mm.setPointerCapture(ev.pointerId); cancelAnimationFrame(anim); minimapJump(ev); });
+mm.addEventListener('pointermove', (ev) => { if (mmDrag) minimapJump(ev); });
+mm.addEventListener('pointerup', () => { mmDrag = false; });
+
+/* ---------- export: PNG + PDF (drawn on a canvas, no libraries) ---------- */
+const THEMES = {
+  light: { bg: '#f3f4f6', card: '#ffffff', border: '#e2e5ea', text: '#15181e', muted: '#5f6775', accent: '#3563e9', edge: '#7f8797', edgeBack: '#b4bac5', label: '#ffffff', fill: '#f6f7f9', shadow: 'rgba(16,24,40,.12)' },
+  dark: { bg: '#0e1014', card: '#1a1d24', border: '#2a2f3a', text: '#e7e9ee', muted: '#98a0ae', accent: '#7c9dff', edge: '#727b8c', edgeBack: '#474e5b', label: '#1c2028', fill: '#1c2028', shadow: 'rgba(0,0,0,.45)' },
+};
+const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgba = (h, a) => { const [r, g, b] = hexRgb(h); return `rgba(${r},${g},${b},${a})`; };
+const mixHex = (a, b, t) => { const A = hexRgb(a), B = hexRgb(b); return '#' + A.map((v, i) => Math.round(v * t + B[i] * (1 - t)).toString(16).padStart(2, '0')).join(''); };
+const currentTheme = () => matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+function rr(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitText(ctx, t, max) {
+  if (max <= 0) return '';
+  if (ctx.measureText(t).width <= max) return t;
+  while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
+  return t + '…';
+}
+const shown = e => !(document.body.classList.contains('hide-back') && e.kind === 'back') && !(document.body.classList.contains('hide-cross') && e.cross);
+
+function drawFrames(ctx, T, only) {
+  for (const g of live) {
+    if (only && !g.screens.some(sc => only.has(sc.id))) continue;
+    rr(ctx, g.bx, g.by, g.bw, g.bh, 22);
+    ctx.fillStyle = rgba(g.color, g.kind === 'nav' ? .10 : .07); ctx.fill();
+    ctx.strokeStyle = rgba(g.color, .35); ctx.lineWidth = g.kind === 'nav' ? 2 : 1.5; ctx.stroke();
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.font = `700 22px ${FONT}`; ctx.fillStyle = mixHex(g.color, T.text, .7);
+    const label = fitText(ctx, g.label || g.id, g.bw - 48);
+    ctx.fillText(label, g.bx + 24, g.by + 44);
+    if (g.description) {
+      const lw = ctx.measureText(label).width;
+      ctx.font = `14px ${FONT}`; ctx.fillStyle = T.muted;
+      ctx.fillText(fitText(ctx, g.description, g.bw - 58 - lw), g.bx + 34 + lw, g.by + 44);
+    }
+  }
+}
+function drawCards(ctx, T, only) {
+  for (const s of screens) {
+    if (only && !only.has(s.id)) continue;
+    const g = groupById.get(s.group), x = s.x, y = s.y, w = s.cw, h = s.ch;
+    ctx.save(); ctx.shadowColor = T.shadow; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
+    rr(ctx, x, y, w, h, 14); ctx.fillStyle = T.card; ctx.fill(); ctx.restore();
+    ctx.save(); rr(ctx, x, y, w, h, 14); ctx.clip();
+    const iy = y + C.header;
+    ctx.fillStyle = T.fill; ctx.fillRect(x, iy, w, s.ih);
+    const img = cardEls.get(s.id).querySelector('img');
+    if (img && img.naturalWidth) {
+      const sh = img.naturalHeight * Math.min(1, s.ih / s.fullIh);
+      ctx.drawImage(img, 0, 0, img.naturalWidth, sh, x, iy, w, Math.min(s.ih, s.fullIh));
+      if (s.cropped) {
+        const gr = ctx.createLinearGradient(0, iy + s.ih - 60, 0, iy + s.ih);
+        gr.addColorStop(0, rgba(T.card, 0)); gr.addColorStop(1, rgba(T.card, .92));
+        ctx.fillStyle = gr; ctx.fillRect(x, iy + s.ih - 60, w, 60);
+      }
+    } else {
+      ctx.fillStyle = T.muted; ctx.font = `13px ${FONT}`; ctx.textAlign = 'center';
+      ctx.fillText('No screenshot captured', x + w / 2, iy + s.ih / 2); ctx.textAlign = 'left';
+    }
+    if (hotspotMode) for (const e of edges) {
+      if (e.from !== s.id || !e.hsr || !shown(e) || (only && !only.has(e.to))) continue;
+      const c = e.cross ? groupById.get(byId.get(e.to).group).color : T.accent, r = e.hsr;
+      rr(ctx, r.l, r.t, r.r - r.l, r.b - r.t, 6); ctx.fillStyle = rgba(c, .16); ctx.fill();
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // header
+    ctx.fillStyle = T.card; ctx.fillRect(x, y, w, C.header);
+    ctx.fillStyle = T.border; ctx.fillRect(x, y + C.header - 1, w, 1);
+    rr(ctx, x + 12, y + 17, 10, 10, 3); ctx.fillStyle = g.color; ctx.fill();
+    ctx.textBaseline = 'middle';
+    let routeW = 0;
+    if (s.route) {
+      ctx.font = `11px ${MONO}`; ctx.fillStyle = T.muted; ctx.textAlign = 'right';
+      const r = fitText(ctx, s.route, w * .45); routeW = ctx.measureText(r).width + 8;
+      ctx.fillText(r, x + w - 12, y + 22); ctx.textAlign = 'left';
+    }
+    ctx.font = `600 14px ${FONT}`; ctx.fillStyle = T.text;
+    ctx.fillText(fitText(ctx, s.title || s.id, w - 42 - routeW), x + 30, y + 22);
+    // badges
+    let bx = x + 8;
+    for (const [t, col] of [[s.entry && 'ENTRY', T.accent], [s.state && String(s.state).toUpperCase(), '#6b7280']]) {
+      if (!t) continue;
+      ctx.font = `700 10px ${FONT}`; const bw = ctx.measureText(t).width + 14;
+      rr(ctx, bx, y + 52, bw, 17, 8.5); ctx.fillStyle = col; ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText(t, bx + 7, y + 61); bx += bw + 4;
+    }
+    ctx.restore();
+    rr(ctx, x + .5, y + .5, w - 1, h - 1, 14); ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.stroke();
+  }
+}
+const inScope = (e, only) => !only || (only.has(e.from) && only.has(e.to));
+function drawEdges(ctx, T, only) {
+  ctx.lineJoin = 'round';
+  for (const e of edges) {
+    if (!inScope(e, only)) continue;
+    if (!shown(e) || !e.pts || e.pts.length < 2) continue;
+    const col = e.cross ? groupById.get(byId.get(e.to).group).color : e.kind === 'back' ? T.edgeBack : T.edge;
+    ctx.setLineDash(e.cross ? [9, 6] : e.kind === 'back' ? [3, 6] : e.kind === 'modal' ? [2, 5] : []);
+    ctx.lineCap = e.kind === 'modal' ? 'round' : 'butt';
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(new Path2D(roundedPath(e.pts)));
+    ctx.setLineDash([]);
+    const a = e.pts[e.pts.length - 2], b = e.pts[e.pts.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    ctx.save(); ctx.translate(b[0], b[1]); ctx.rotate(ang);
+    ctx.beginPath(); ctx.moveTo(1, 0); ctx.lineTo(-11, -5.5); ctx.lineTo(-11, 5.5); ctx.closePath();
+    ctx.fillStyle = col; ctx.fill(); ctx.restore();
+  }
+}
+function drawLabels(ctx, T, only) {
+  if (document.body.classList.contains('hide-labels')) return;
+  ctx.font = `12px ${FONT}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  for (const e of edges) {
+    if (!e.label || e.lx == null || !shown(e) || !inScope(e, only)) continue;
+    const t = fitText(ctx, e.label, 204), w = ctx.measureText(t).width + 16;
+    rr(ctx, e.lx - w / 2, e.ly - 10, w, 20, 10); ctx.fillStyle = T.label; ctx.fill();
+    ctx.strokeStyle = T.border; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = T.muted; ctx.fillText(t, e.lx, e.ly + .5);
+  }
+  ctx.textAlign = 'left';
+}
+function exportBox(scope) {
+  if (scope === 'view') return { l: -cam.x / cam.k, t: -cam.y / cam.k, r: (stage.clientWidth - cam.x) / cam.k, b: (stage.clientHeight - cam.y) / cam.k };
+  const g = groupById.get(scope);
+  if (g) return { l: g.bx - 40, t: g.by - 40, r: g.bx + g.bw + 40, b: g.by + g.bh + 40 };
+  const b = worldBox(); return { l: b.l - 60, t: b.t - 60, r: b.r + 60, b: b.b + 60 };
+}
+async function renderCanvas({ scope = 'all', theme = currentTheme(), scale = 2, maxPixels = 32e6 } = {}) {
+  await Promise.all([...document.querySelectorAll('.card img')].map(i => i.decode().catch(() => {})));
+  const T = THEMES[theme] || THEMES.light, box = exportBox(scope);
+  const g = groupById.get(scope);
+  const title = scope !== 'view';
+  const head = title ? 96 : 0, W = box.r - box.l, H = box.b - box.t + head;
+  if (scope === 'view') scale = Math.max(1, Math.min(3, cam.k * (window.devicePixelRatio || 1)));
+  const k = Math.min(scale, Math.sqrt(maxPixels / (W * H)), 16000 / W, 16000 / H);
+  const cv = document.createElement('canvas');
+  cv.width = Math.max(1, Math.round(W * k)); cv.height = Math.max(1, Math.round(H * k));
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = T.bg; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.scale(k, k);
+  if (title) {
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `700 30px ${FONT}`; ctx.fillStyle = T.text;
+    ctx.fillText(fitText(ctx, (D.title || 'Screen flow') + (g ? ' — ' + (g.label || g.id) : ''), W - 80), 40, 54);
+    const meta = [g ? g.description : D.description, (g ? g.screens.length : screens.length) + ' screens',
+      D.platform, (D.generatedAt || '').slice(0, 10)].filter(Boolean).join('  ·  ');
+    ctx.font = `15px ${FONT}`; ctx.fillStyle = T.muted; ctx.fillText(fitText(ctx, meta, W - 80), 40, 80);
+  }
+  ctx.beginPath(); ctx.rect(0, head, W, H - head); ctx.clip();   // nothing bleeds into the title
+  ctx.translate(-box.l, head - box.t);
+  const only = g ? new Set(g.screens.map(sc => sc.id)) : null;   // a group export shows only its own links
+  drawFrames(ctx, T, only); drawCards(ctx, T, only); drawEdges(ctx, T, only); drawLabels(ctx, T, only);
+  return cv;
+}
+const toBlob = (cv, type, q) => new Promise(res => cv.toBlob(res, type, q));
+
+/* Minimal PDF: one JPEG image per page, page long side 1190pt (A3), plus the title as metadata. */
+function makePdf(pages, title) {
+  const enc = new TextEncoder(), chunks = [], offs = [];
+  let len = 0;
+  const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); len += b.length; };
+  const obj = (n, ...parts) => { offs[n] = len; push(`${n} 0 obj\n`); parts.forEach(push); push('\nendobj\n'); };
+  const hex = s => 'FEFF' + [...s].map(c => c.charCodeAt(0).toString(16).padStart(4, '0')).join('').toUpperCase();
+  push('%PDF-1.4\n'); push(new Uint8Array([37, 226, 227, 207, 211, 10]));
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, `<< /Type /Pages /Kids [${pages.map((_, i) => `${4 + 3 * i} 0 R`).join(' ')}] /Count ${pages.length} >>`);
+  obj(3, `<< /Title <${hex(title)}> /Producer (screen-flow) >>`);
+  pages.forEach((p, i) => {
+    const long = 1190, ratio = p.w / p.h;
+    const pw = (ratio >= 1 ? long : long * ratio).toFixed(2), ph = (ratio >= 1 ? long / ratio : long).toFixed(2);
+    const n = 4 + 3 * i, content = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+    obj(n, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${n + 2} 0 R >> >> /Contents ${n + 1} 0 R >>`);
+    obj(n + 1, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    obj(n + 2, `<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpeg.length} >>\nstream\n`, p.jpeg, '\nendstream');
+  });
+  const count = 3 + 3 * pages.length, xref = len;
+  let x = `xref\n0 ${count + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= count; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  push(x + `trailer\n<< /Size ${count + 1} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(chunks, { type: 'application/pdf' });
+}
+async function exportFlow({ format = 'png', scope = 'all', theme = currentTheme(), pagePerGroup = true } = {}) {
+  if (format === 'png') return toBlob(await renderCanvas({ scope, theme }), 'image/png');
+  const scopes = [scope];
+  if (scope === 'all' && pagePerGroup && live.length > 1) scopes.push(...live.map(g => g.id));
+  const pages = [];
+  for (const sc of scopes) {
+    const cv = await renderCanvas({ scope: sc, theme, maxPixels: 16e6 });
+    const jpeg = new Uint8Array(await (await toBlob(cv, 'image/jpeg', .9)).arrayBuffer());
+    pages.push({ jpeg, w: cv.width, h: cv.height });
+  }
+  return makePdf(pages, D.title || 'Screen flow');
+}
+window.screenFlowExport = exportFlow;   // also used by scripts/export.mjs
+const slug = () => (D.title || 'screen-flow').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'screen-flow';
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function setupExportUi() {
+  const sel = $('x-scope');
+  sel.append(new Option('Everything', 'all'), new Option('Current view', 'view'));
+  for (const g of live) sel.append(new Option('Group: ' + (g.label || g.id), g.id));
+  $('x-theme').value = currentTheme();
+  const sync = () => { $('x-pages-row').hidden = sel.value !== 'all' || live.length < 2; };
+  sel.onchange = sync; sync();
+  $('export').onclick = () => { $('export-pop').hidden = !$('export-pop').hidden; };
+  const run = async (format) => {
+    const btns = [$('x-png'), $('x-pdf')]; btns.forEach(b => b.disabled = true);
+    $('x-status').textContent = 'Rendering…';
+    try {
+      const scope = sel.value, blob = await exportFlow({ format, scope, theme: $('x-theme').value, pagePerGroup: $('x-pages').checked });
+      const part = scope === 'all' ? '' : '-' + (scope === 'view' ? 'view' : scope);
+      download(blob, `${slug()}${part}.${format}`);
+      $('x-status').textContent = `Saved ${(blob.size / 1048576).toFixed(1)} MB`;
+    } catch (err) { $('x-status').textContent = 'Export failed: ' + err.message; }
+    finally { btns.forEach(b => b.disabled = false); }
+  };
+  $('x-png').onclick = () => run('png');
+  $('x-pdf').onclick = () => run('pdf');
+}
+
+/* ---------- toolbar + keys ---------- */
+const centerZoom = (f) => zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, f);
+$('zoom-in').onclick = () => centerZoom(1.25);
+$('zoom-out').onclick = () => centerZoom(0.8);
+$('zoom-val').onclick = () => centerZoom(1 / cam.k);
+$('fit').onclick = () => fitAll();
+const toggle = (btn, cls) => {
+  $(btn).onclick = () => {
+    const on = $(btn).getAttribute('aria-pressed') !== 'true';
+    $(btn).setAttribute('aria-pressed', String(on)); document.body.classList.toggle(cls, !on);
+  };
+};
+const setHotspots = (on) => {
+  hotspotMode = on; document.body.classList.toggle('hotspots', on);
+  $('t-hotspots').setAttribute('aria-pressed', String(on));
+  try { localStorage.setItem('screen-flow:hotspots', on ? '1' : '0'); } catch {}
+};
+$('t-hotspots').hidden = !hasHotspots;
+$('t-hotspots').onclick = () => { setHotspots(!hotspotMode); placeCards(); };
+toggle('t-labels', 'hide-labels'); toggle('t-cross', 'hide-cross'); toggle('t-back', 'hide-back');
+$('reset').onclick = () => { for (const s of screens) { s.x = s.ax; s.y = s.ay; } placeCards(); saveMoves(); };
+$('side-toggle').onclick = () => { $('app').classList.toggle('side-closed'); setTimeout(drawMinimap, 220); };
+$('d-close').onclick = () => select(null);
+window.addEventListener('keydown', (ev) => {
+  if (ev.target.matches('input, textarea, select')) return;
+  if (ev.key === '/') { ev.preventDefault(); if ($('app').classList.contains('side-closed')) $('app').classList.remove('side-closed'); $('q').focus(); }
+  else if (ev.key === 'f' || ev.key === 'F' || ev.key === '0') fitAll();
+  else if (ev.key === '+' || ev.key === '=') centerZoom(1.25);
+  else if (ev.key === '-' || ev.key === '_') centerZoom(0.8);
+  else if (ev.key === 'Escape') { if (!$('export-pop').hidden) $('export-pop').hidden = true; else select(null); }
+  else if ((ev.key === 'h' || ev.key === 'H') && hasHotspots) $('t-hotspots').click();
+});
+window.addEventListener('resize', drawMinimap);
+
+/* ---------- boot ---------- */
+layoutAll();
+const moves = loadMoves();
+for (const [id, p] of Object.entries(moves)) { const s = byId.get(id); if (s && Array.isArray(p)) { s.x = p[0]; s.y = p[1]; } }
+buildDom();
+setupExportUi();
+setHotspots(hotspotMode);
+measure();
+placeCards();
+window.__screenFlow = { screens, edges, groups: live };  // for automated checks
+saveMoves();
+if (window.innerWidth < 760) $('app').classList.add('side-closed');
+requestAnimationFrame(() => {
+  fitAll(false);
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (byId.has(hash)) select(hash);
+  else if (groupById.has(hash)) focusGroup(hash);
+});
+})();
+</script>
+</body>
+</html>

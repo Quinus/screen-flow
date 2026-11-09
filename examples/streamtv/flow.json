@@ -1,0 +1,50 @@
+{
+  "title": "StreamTV — app navigation",
+  "description": "Whole-app screen flow of the StreamTV mobile app.",
+  "scope": "app",
+  "platform": "Web (mobile viewport 390×844)",
+  "groups": [
+    {"id": "main", "label": "Main navigation", "kind": "nav", "description": "Bottom tab bar"},
+    {"id": "auth", "label": "Onboarding & login", "description": "First launch"},
+    {"id": "watch", "label": "Watch & record"},
+    {"id": "settings", "label": "Settings", "parent": "main"}
+  ],
+  "screens": [
+    {"id": "home", "title": "Home", "group": "main", "image": "screens/home.png", "route": "/", "entry": true},
+    {"id": "search", "title": "Search", "group": "main", "image": "screens/search.png", "route": "/search"},
+    {"id": "guide", "title": "TV Guide", "group": "main", "image": "screens/guide.png", "route": "/guide"},
+    {"id": "profile", "title": "Profile", "group": "main", "image": "screens/profile.png", "route": "/profile"},
+    {"id": "welcome", "title": "Welcome", "group": "auth", "image": "screens/welcome.png", "route": "/welcome", "entry": true},
+    {"id": "login", "title": "Log in", "group": "auth", "image": "screens/login.png", "route": "/login"},
+    {"id": "signup", "title": "Create account", "group": "auth", "image": "screens/signup.png", "route": "/signup"},
+    {"id": "details", "title": "Show details", "group": "watch", "image": "screens/details.png", "route": "/show/:id"},
+    {"id": "player", "title": "Player", "group": "watch", "image": "screens/player.png", "route": "/play/:id"},
+    {"id": "record-confirm", "title": "Record dialog", "group": "watch", "image": "screens/record-confirm.png", "state": "modal"},
+    {"id": "recordings", "title": "Recordings", "group": "watch", "image": "screens/recordings.png", "route": "/recordings"},
+    {"id": "settings", "title": "Settings", "group": "settings", "image": "screens/settings.png", "route": "/settings"},
+    {"id": "parental", "title": "Parental control", "group": "settings", "image": "screens/parental.png", "route": "/settings/parental"},
+    {"id": "pin", "title": "Change PIN", "group": "settings", "image": "screens/pin.png", "route": "/settings/parental/pin"}
+  ],
+  "edges": [
+    {"from": "home", "to": "search", "label": "Tab: Search"},
+    {"from": "home", "to": "guide", "label": "Tab: Guide"},
+    {"from": "home", "to": "profile", "label": "Tab: Profile"},
+    {"from": "welcome", "to": "signup", "label": "Get started"},
+    {"from": "welcome", "to": "login", "label": "I have an account"},
+    {"from": "login", "to": "home", "label": "Log in", "kind": "redirect"},
+    {"from": "signup", "to": "home", "label": "Create account", "kind": "redirect"},
+    {"from": "home", "to": "details", "label": "Tap show"},
+    {"from": "search", "to": "details", "label": "Tap result"},
+    {"from": "guide", "to": "details", "label": "Tap programme"},
+    {"from": "home", "to": "player", "label": "Tap 'Live now'"},
+    {"from": "details", "to": "player", "label": "Play"},
+    {"from": "details", "to": "record-confirm", "label": "Record", "kind": "modal"},
+    {"from": "record-confirm", "to": "recordings", "label": "Record episode"},
+    {"from": "record-confirm", "to": "details", "label": "Cancel", "kind": "back"},
+    {"from": "profile", "to": "settings", "label": "Settings"},
+    {"from": "profile", "to": "welcome", "label": "Log out", "kind": "redirect"},
+    {"from": "settings", "to": "parental", "label": "Parental control"},
+    {"from": "parental", "to": "pin", "label": "Change PIN"},
+    {"from": "pin", "to": "parental", "label": "Save", "kind": "back"}
+  ]
+}

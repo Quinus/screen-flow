@@ -1,0 +1,166 @@
+{
+  "baseUrl": "http://localhost:8765",
+  "outDir": "screens",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "deviceScaleFactor": 2,
+  "isMobile": true,
+  "screens": [
+    {
+      "id": "details",
+      "path": "/details.html",
+      "hotspots": [
+        {
+          "to": "player",
+          "selector": ".btn:has-text('Play')"
+        },
+        {
+          "to": "record-confirm",
+          "selector": ".btn:has-text('Record')"
+        }
+      ]
+    },
+    {
+      "id": "guide",
+      "path": "/guide.html",
+      "hotspots": [
+        {
+          "to": "details",
+          "selector": "text=19:00 Match day"
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "path": "/home.html",
+      "hotspots": [
+        {
+          "to": "search",
+          "selector": "nav span:has-text('Search')"
+        },
+        {
+          "to": "guide",
+          "selector": "nav span:has-text('Guide')"
+        },
+        {
+          "to": "profile",
+          "selector": "nav span:has-text('Profile')"
+        },
+        {
+          "to": "details",
+          "selector": ".row >> nth=2"
+        },
+        {
+          "to": "player",
+          "selector": "text=Live now"
+        }
+      ]
+    },
+    {
+      "id": "login",
+      "path": "/login.html",
+      "hotspots": [
+        {
+          "to": "home",
+          "selector": ".btn:has-text('Log in')"
+        }
+      ]
+    },
+    {
+      "id": "parental",
+      "path": "/parental.html",
+      "hotspots": [
+        {
+          "to": "pin",
+          "selector": ".btn:has-text('Change PIN')"
+        }
+      ]
+    },
+    {
+      "id": "pin",
+      "path": "/pin.html"
+    },
+    {
+      "id": "player",
+      "path": "/player.html"
+    },
+    {
+      "id": "profile",
+      "path": "/profile.html",
+      "hotspots": [
+        {
+          "to": "settings",
+          "selector": ".btn:has-text('Settings')"
+        },
+        {
+          "to": "welcome",
+          "selector": "text=Log out"
+        }
+      ]
+    },
+    {
+      "id": "record-confirm",
+      "path": "/record-confirm.html",
+      "hotspots": [
+        {
+          "to": "recordings",
+          "selector": ".btn:has-text('Record episode')"
+        },
+        {
+          "to": "details",
+          "selector": "text=Cancel"
+        }
+      ]
+    },
+    {
+      "id": "recordings",
+      "path": "/recordings.html"
+    },
+    {
+      "id": "search",
+      "path": "/search.html",
+      "hotspots": [
+        {
+          "to": "details",
+          "selector": "text=News 24"
+        }
+      ]
+    },
+    {
+      "id": "settings",
+      "path": "/settings.html",
+      "hotspots": [
+        {
+          "to": "parental",
+          "selector": "text=Parental control"
+        }
+      ]
+    },
+    {
+      "id": "signup",
+      "path": "/signup.html",
+      "hotspots": [
+        {
+          "to": "home",
+          "selector": ".btn:has-text('Create account')"
+        }
+      ]
+    },
+    {
+      "id": "welcome",
+      "path": "/welcome.html",
+      "hotspots": [
+        {
+          "to": "signup",
+          "selector": ".btn:has-text('Get started')"
+        },
+        {
+          "to": "login",
+          "selector": ".btn:has-text('I already')"
+        }
+      ]
+    }
+  ]
+}

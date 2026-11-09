@@ -1,0 +1,7 @@
+interface:
+  display_name: "Screen Flow"
+  short_description: "Map an app or feature as a zoomable HTML screen flow built from real screenshots"
+  default_prompt: "Use $screen-flow to map this app's navigation as a screen flow with real screenshots."
+
+policy:
+  allow_implicit_invocation: true
