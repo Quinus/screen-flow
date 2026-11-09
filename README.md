@@ -1,5 +1,7 @@
 # screen-flow
 
+![A screen flow of the StreamTV example app, with arrows starting at the buttons that trigger each navigation](docs/hero.png)
+
 An [Agent Skill](https://agentskills.io) that maps an app's navigation as a **screen flow built from real
 screenshots**. The result is one standalone HTML file with an infinite, zoomable canvas:
 
@@ -48,7 +50,7 @@ Or copy `skills/screen-flow/` into a project's `.claude/skills/` or `.agents/ski
 | `skills/screen-flow/scripts/export.mjs` | Optional: export a built page to PNG/PDF headlessly |
 | `skills/screen-flow/assets/viewer.html` | The canvas viewer template |
 | `skills/screen-flow/references/` | The `flow.json` format and capture commands per platform |
-| `examples/streamtv/` | A sample flow (14 screens, 4 groups) and its built `screen-flow.html` |
+| `examples/streamtv/` | A sample flow (14 screens, 4 groups), its built `screen-flow.html`, PNG and PDF exports, and the small demo app it was captured from (`app/`) |
 
 Build the example yourself:
 

@@ -28,7 +28,7 @@
       "hotspots": [
         {
           "to": "details",
-          "selector": "text=19:00 Match day"
+          "selector": ".slot:has-text('Match day')"
         }
       ]
     },
@@ -50,11 +50,11 @@
         },
         {
           "to": "details",
-          "selector": ".row >> nth=2"
+          "selector": ".poster >> nth=0"
         },
         {
           "to": "player",
-          "selector": "text=Live now"
+          "selector": ".hero"
         }
       ]
     },
@@ -92,7 +92,7 @@
       "hotspots": [
         {
           "to": "settings",
-          "selector": ".btn:has-text('Settings')"
+          "selector": ".btn-settings"
         },
         {
           "to": "welcome",
@@ -124,7 +124,7 @@
       "hotspots": [
         {
           "to": "details",
-          "selector": "text=News 24"
+          "selector": ".item:has-text('News 24')"
         }
       ]
     },
@@ -134,7 +134,7 @@
       "hotspots": [
         {
           "to": "parental",
-          "selector": "text=Parental control"
+          "selector": ".item:has-text('Parental control')"
         }
       ]
     },

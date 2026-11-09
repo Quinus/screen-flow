@@ -1,0 +1,50 @@
+<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>pin</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font:15px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;background:#0d0f16;color:#f3f4f8;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+.status{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font-weight:600;font-size:15px}
+.status i{display:inline-block;width:25px;height:12px;border:1.5px solid #f3f4f8;border-radius:4px;position:relative;vertical-align:-1px}.status i:after{content:"";position:absolute;inset:1.5px 4px 1.5px 1.5px;background:#f3f4f8;border-radius:1.5px}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;margin-right:6px}.bars b{width:3px;background:#f3f4f8;border-radius:1px}
+main{flex:1;overflow:hidden;padding:0 18px}
+h1{font-size:30px;margin:6px 0 14px;letter-spacing:-.5px}h2{font-size:17px;margin:20px 0 10px;display:flex;justify-content:space-between;align-items:baseline}h2 small{font-size:13px;color:#ff6b4a;font-weight:500}
+.top{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
+.logo{font-weight:800;font-size:22px;letter-spacing:-.4px}.logo span{color:#ff6b4a}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ffb36b,#ff5a5f);display:grid;place-items:center;font-weight:700;font-size:14px;color:#1a0d08}
+.muted{color:#9aa0b4}.small{font-size:13px}
+.badge{display:inline-flex;align-items:center;gap:5px;background:#ff3b30;color:#fff;font-size:11px;font-weight:800;letter-spacing:.6px;padding:3px 7px;border-radius:5px}.badge:before{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+.hero{height:206px;border-radius:18px;position:relative;overflow:hidden;padding:16px;display:flex;flex-direction:column;justify-content:flex-end}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.65))}.hero>*{position:relative;z-index:1}
+.hero .badge{position:absolute;top:14px;left:14px}
+.hero h3{margin:0;font-size:22px;letter-spacing:-.3px}.hero p{margin:2px 0 0;font-size:13px;color:#dfe2ea}
+.rail{display:flex;gap:10px}
+.poster{flex:none;width:108px;height:156px;border-radius:12px;position:relative;overflow:hidden;padding:9px;display:flex;align-items:flex-end;font-weight:700;font-size:13px;line-height:1.15}
+.poster:after,.wide:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.55))}.poster span,.wide span{position:relative;z-index:1}
+.wide{flex:none;width:168px;height:96px;border-radius:12px;position:relative;overflow:hidden;padding:9px 10px 14px;display:flex;align-items:flex-end;font-weight:700;font-size:13px}
+.prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.25);z-index:2}.prog b{display:block;height:100%;background:#ff6b4a}
+.g1{background:radial-gradient(circle at 30% 20%,#3dd68c 0,transparent 45%),linear-gradient(135deg,#0f5132,#0a2a6b)}
+.g2{background:radial-gradient(circle at 70% 25%,#ffd36b 0,transparent 40%),linear-gradient(160deg,#ff7a45,#7a1f5c)}
+.g3{background:radial-gradient(circle at 25% 30%,#7cc7ff 0,transparent 42%),linear-gradient(160deg,#2a4ad9,#130f3a)}
+.g4{background:radial-gradient(circle at 75% 70%,#ff8fd0 0,transparent 40%),linear-gradient(200deg,#6d28d9,#1e1035)}
+.g5{background:radial-gradient(circle at 30% 75%,#c7f36b 0,transparent 40%),linear-gradient(140deg,#14532d,#0f766e)}
+.g6{background:radial-gradient(circle at 60% 30%,#ffe7a3 0,transparent 38%),linear-gradient(170deg,#b45309,#3b0d0d)}
+.g7{background:radial-gradient(circle at 50% 30%,#9ae6ff 0,transparent 45%),linear-gradient(180deg,#0e7490,#082f49)}
+.g8{background:radial-gradient(circle at 70% 60%,#fca5a5 0,transparent 40%),linear-gradient(150deg,#be123c,#1f0a1a)}
+.tabs{flex:none;display:flex;justify-content:space-around;padding:9px 6px 26px;background:rgba(18,20,30,.96);border-top:1px solid #23263a}
+.tabs span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#7d8399;width:76px;padding:2px 0}
+.tabs span.on{color:#ff6b4a}.tabs svg{width:24px;height:24px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:14px;background:#ff6b4a;color:#1b0a05;font-weight:700;font-size:16px}
+.btn.ghost{background:#1d2030;color:#f3f4f8}.btn.line{background:transparent;border:1.5px solid #3a3f58;color:#f3f4f8}
+.list{background:#161925;border-radius:16px;overflow:hidden}
+.item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #22263a}.item:last-child{border:0}
+.item .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:16px;flex:none}
+.item .grow{flex:1}.item .chev{color:#59607a;font-size:20px}
+.thumb{width:76px;height:46px;border-radius:8px;flex:none}
+.field{background:#161925;border:1.5px solid #262a3d;border-radius:14px;padding:10px 14px;margin-bottom:12px}.field label{display:block;font-size:12px;color:#8a90a6;margin-bottom:2px}.field div{font-size:16px}
+.field.focus{border-color:#ff6b4a}
+.chips{display:flex;gap:8px;flex-wrap:nowrap}.chip{padding:7px 13px;border-radius:999px;background:#1b1e2c;font-size:13px;font-weight:600;color:#c4c8d6;white-space:nowrap}.chip.on{background:#f3f4f8;color:#0d0f16}
+.back{display:flex;align-items:center;gap:6px;color:#ff6b4a;font-size:16px;margin:4px 0 2px}
+.toggle{width:50px;height:30px;border-radius:15px;background:#34c759;position:relative;flex:none}.toggle:after{content:"";position:absolute;top:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#fff}
+.toggle.off{background:#3a3f58}.toggle.off:after{right:auto;left:2px}
+</style><div class="status"><span>9:41</span><span><span class="bars"><b style="height:4px"></b><b style="height:6px"></b><b style="height:8px"></b><b style="height:10px"></b></span><i></i></span></div><main><div class="back">‹ Parental control</div><h1>Change PIN</h1><p class="muted" style="margin:-6px 0 26px">Enter a new 4-digit PIN.</p>
+<div style="display:flex;gap:18px;justify-content:center;margin-bottom:30px"><span style="width:18px;height:18px;border-radius:50%;background:#ff6b4a"></span><span style="width:18px;height:18px;border-radius:50%;background:#ff6b4a"></span><span style="width:18px;height:18px;border-radius:50%;background:#ff6b4a"></span><span style="width:18px;height:18px;border-radius:50%;background:#2c3044"></span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 22px;padding:0 20px"><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">1</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">2</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">3</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">4</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">5</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">6</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">7</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">8</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">9</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px"> </div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">0</div><div style="height:62px;border-radius:31px;background:#1b1e2c;display:grid;place-items:center;font-size:26px">⌫</div></div>
+<div class="btn" style="margin-top:22px">Save</div></main></html>
